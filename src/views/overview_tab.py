@@ -1,4 +1,5 @@
 from datetime import datetime
+import pandas as pd
 import tkinter as tk
 import ttkbootstrap as ttk
 from typing import List, Dict
@@ -29,7 +30,9 @@ class OverviewTab:
         self.overview_frame = ttk.Frame(self.tasks_pwindow)
         self.tasks_pwindow.add(self.overview_frame)
 
-    def create_metrics_treeview_widget(self) -> ttk.Treeview:
+    def create_metrics_treeview_widget(
+        self, statistics_df: pd.DataFrame
+    ) -> ttk.Treeview:
         treeviews_frame = ttk.LabelFrame(
             self.overview_frame,
             text='Métricas Gerais',
@@ -42,37 +45,9 @@ class OverviewTab:
             expand=True
         )
 
-        columns = {
-            'compliance': 'Compliance',
-            'advisory': 'Consultivo',
-            'litigation': 'Contencioso',
-            'contracts': 'Contratos',
-            'agreements': 'Convênios',
-            'corporate': 'Docs. Corporativos',
-            'notices': 'Editais',
-            'tax_immunities': 'Imunidades',
-            'rental': 'Locação',
-            'legal_letters': 'Ofícios'
-        }
+        columns = statistics_df.columns.tolist()
 
-        rows = [
-            'Demandas Abertas',
-            'Demandas Fechadas',
-            'μ RT (d)',
-            'σ RT (d)',
-            'μ LT (d)',
-            'σ LT (d)',
-            'μ CT (d)',
-            'σ CT (d)',
-            'TT (d)',
-            'm LT',
-            'LT Mínimo Estimado (d)',
-            'LT Máximo Estimado (d)',
-            '<LT Mín. Estimado',
-            '<=μ LT',
-            '<=LT Máx. Estimado',
-            'Dentro do Intervalo'
-        ]
+        rows = statistics_df.index.tolist()
 
         overview_metrics_treeview = ttk.Treeview(
             treeviews_frame,
@@ -88,9 +63,9 @@ class OverviewTab:
         overview_metrics_names_treeview.heading("#0", text="Métrica")
         overview_metrics_names_treeview.column("#0", width=150, anchor='w')
 
-        for key, value in columns.items():
-            overview_metrics_treeview.heading(key, text=value)
-            overview_metrics_treeview.column(key, width=125, anchor='center')
+        for col in columns.items():
+            overview_metrics_treeview.heading(col, text=col)
+            overview_metrics_treeview.column(col, width=125, anchor='center')
 
         for row_name in rows:
             overview_metrics_names_treeview.insert(
@@ -191,26 +166,8 @@ class OverviewTab:
     def fill_task_list_treeview(
         self, task_list_treeview: ttk.Treeview, tasks: List[Dict[str, str]]
     ):
-        for task in tasks:
-            task_name = task['task_name']
-            task_tag = task['task_tag']
-            task_assignee = task['task_assignee']
-            task_backlog_date = task['task_backlog_date']
-            task_start_date = task['task_start_date']
-            task_done_date = task['task_done_date']
-            task_delivery_date = task['task_delivery_date']
-            task_list_treeview.insert(
-                '',
-                'end',
-                values=(
-                    task_name,
-                    task_tag,
-                    task_assignee,
-                    task_backlog_date,
-                    task_start_date,
-                    task_done_date,
-                    task_delivery_date
-                ))
+        for _, row in tasks.iterrows():
+            task_list_treeview.insert('', 'end', values=list(row))
 
     def create_controls_frame(self):
         self.controls_frame = ttk.Frame(self.overview_frame, padding=10)

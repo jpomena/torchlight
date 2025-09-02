@@ -1,20 +1,26 @@
 from src import Database
 from src import MetricsCalculator
-from src import TaskFilters
 from src import MainWindow
 from src import Controller
+from src import TasksDataframe
+from src import StatisticsDataframe
 
 
 def main():
     database = Database()
     metrics_calculator = MetricsCalculator()
-    task_filters = TaskFilters()
+    tasks_dataframe = TasksDataframe()
+    statistics_dataframe = StatisticsDataframe()
 
     themename = 'darkly'
     main_window = MainWindow(themename)
 
     controller = Controller(  # noqa: F841
-        database, metrics_calculator, task_filters, main_window
+        database,
+        metrics_calculator,
+        tasks_dataframe,
+        statistics_dataframe
+        main_window
     )
 
     main_window.mainloop()

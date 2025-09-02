@@ -1,8 +1,7 @@
 import sqlite3 as sql
 import pathlib
 import os
-from typing import List
-from typing import Dict
+import pandas as pd
 
 
 class Database:
@@ -49,36 +48,19 @@ class Database:
         self.cursor.execute(create_tasks_info_sql)
         self.conn.commit()
 
-    def get_db_tasks_data(self) -> List[Dict[str, str]]:
-        get_tasks_names_sql = '''SELECT task_name from tasks'''
-        get_tasks_info_sql = '''
+    def create_tasks_df(self) -> pd.DataFrame:
+        get_tasks_data = '''
             SELECT
-                task_tag,
-                task_assignee,
-                task_backlog_date,
-                task_start_date,
-                task_done_date,
-                task_delivery_date
-            FROM tasks_info
+                tasks.task_name,
+                tasks_info.task_tag,
+                tasks_info.task_assignee,
+                tasks_info.task_backlog_date,
+                tasks_info.task_start_date,
+                tasks_info.task_done_date,
+                tasks_info.task_delivery_date
+            FROM tasks JOIN tasks_info
+                ON tasks.task_id = tasks_info.task_id
         '''
-        tasks = []
-
-        self.cursor.execute(get_tasks_names_sql)
-        name_query_results = self.cursor.fetchall()
-
-        self.cursor.execute(get_tasks_info_sql)
-        info_query_results = self.cursor.fetchall()
-
-        for name, infos in zip(name_query_results, info_query_results):
-            task = {
-                'task_name': name[0],
-                'task_tag': infos[0],
-                'task_assignee': infos[1],
-                'task_backlog_date': infos[2],
-                'task_start_date': infos[3],
-                'task_done_date': infos[4],
-                'task_delivery_date': infos[5]
-            }
-            tasks.append(task)
+        tasks = pd.read_sql(get_tasks_data, self.conn)
 
         return tasks
