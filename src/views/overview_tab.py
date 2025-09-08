@@ -2,7 +2,7 @@ from datetime import datetime
 import pandas as pd
 import tkinter as tk
 import ttkbootstrap as ttk
-from typing import List, Dict
+from typing import List
 
 
 class OverviewTab:
@@ -15,141 +15,127 @@ class OverviewTab:
         )
         self.main_pwindow.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        self.overview_frame = ttk.Frame(
-            self.main_pwindow
+        self.right_frame = ttk.Frame(
+            self.main_pwindow, padding=20
         )
-        self.tasks_frame = ttk.Frame(
-            self.main_pwindow
+        self.left_frame = ttk.Frame(
+            self.main_pwindow, padding=20
         )
-        self.main_pwindow.add(self.overview_frame)
-        self.main_pwindow.add(self.tasks_frame)
-        self.tasks_pwindow = ttk.PanedWindow(
-            self.overview_frame, orient=tk.VERTICAL, width=500
+        self.main_pwindow.add(self.left_frame)
+        self.main_pwindow.add(self.right_frame)
+        self.left_pwindow = ttk.PanedWindow(
+            self.left_frame, orient=tk.VERTICAL
         )
-        self.tasks_pwindow.pack(side=tk.RIGHT, fill=tk.Y, expand=True)
-        self.overview_frame = ttk.Frame(self.tasks_pwindow)
-        self.tasks_pwindow.add(self.overview_frame)
+        self.left_pwindow.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def create_metrics_treeview_widget(
         self, statistics_df: pd.DataFrame
     ) -> ttk.Treeview:
-        treeviews_frame = ttk.LabelFrame(
-            self.overview_frame,
-            text='Métricas Gerais',
-            padding=10
-        )
-        treeviews_frame.pack(
-            side=tk.BOTTOM,
-            anchor='sw',
-            fill=tk.BOTH,
-            expand=True
-        )
+        treeviews_frame = self._create_metrics_treeviews_frame()
+        self.left_pwindow.add(treeviews_frame)
 
         columns = statistics_df.columns.tolist()
-
         rows = statistics_df.index.tolist()
 
-        overview_metrics_treeview = ttk.Treeview(
-            treeviews_frame,
-            columns=list(columns.keys()),
-            show='headings'
+        metrics_values_treeview = self._create_metrics_values_treeview(
+            treeviews_frame, columns
         )
-        overview_metrics_names_treeview = ttk.Treeview(
-            treeviews_frame,
-            columns=(),
-            show='tree headings'
+        self.metrics_names_treeview = self._create_metrics_names_treeview(
+            treeviews_frame, rows
+        )
+        y_scrollbar, x_scrollbar = self._create_metrics_scrollbars(
+            treeviews_frame, metrics_values_treeview
         )
 
-        overview_metrics_names_treeview.heading("#0", text="Métrica")
-        overview_metrics_names_treeview.column("#0", width=150, anchor='w')
+        y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.metrics_names_treeview.pack(
+            side=tk.LEFT, fill=tk.Y, expand=True, padx=5, pady=2
+        )
+        metrics_values_treeview.pack(
+            side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=2
+        )
 
-        for col in columns.items():
-            overview_metrics_treeview.heading(col, text=col)
-            overview_metrics_treeview.column(col, width=125, anchor='center')
+        return metrics_values_treeview
+
+    def _create_metrics_treeviews_frame(self) -> ttk.LabelFrame:
+        treeviews_frame = ttk.LabelFrame(
+            self.left_pwindow, text='Métricas Gerais', padding=10
+        )
+        treeviews_frame.pack_propagate(False)
+        return treeviews_frame
+
+    def _create_metrics_values_treeview(
+        self, parent_frame: ttk.Frame, columns: list[str]
+    ) -> ttk.Treeview:
+        treeview = ttk.Treeview(parent_frame, columns=columns, show='headings')
+
+        style = ttk.Style()
+        style.configure('Treeview', rowheight=25)
+        style.map('Treeview', background=[('selected', style.colors.selectbg)])
+
+        for col in columns:
+            treeview.heading(col, text=col)
+            treeview.column(
+                col, width=125, anchor='center', stretch=False
+            )
+
+        return treeview
+
+    def _create_metrics_names_treeview(
+        self, parent_frame: ttk.Frame, rows: list[str]
+    ) -> ttk.Treeview:
+        treeview = ttk.Treeview(
+            parent_frame, columns=(), show='tree headings'
+        )
+
+        style = ttk.Style()
+        style.configure('Treeview', rowheight=25)
+        style.map('Treeview', background=[('selected', style.colors.selectbg)])
+
+        treeview.heading("#0", text="Métrica")
+        treeview.column("#0", width=150, anchor='w')
 
         for row_name in rows:
-            overview_metrics_names_treeview.insert(
+            treeview.insert(
                 parent='', index='end', iid=row_name, text=row_name
             )
 
-        treeview_y_scrollbar = ttk.Scrollbar(
-            treeviews_frame,
-            orient=tk.VERTICAL,
-            command=overview_metrics_treeview.yview
-        )
-        treeview_y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        overview_metrics_treeview.configure(
-            yscrollcommand=treeview_y_scrollbar.set
-        )
+        return treeview
 
-        treeview_x_scrollbar = ttk.Scrollbar(
-            treeviews_frame,
-            orient=tk.HORIZONTAL,
-            command=overview_metrics_treeview.xview
+    def _create_metrics_scrollbars(
+        self, parent_frame: ttk.Frame, treeview: ttk.Treeview
+    ) -> tuple[ttk.Scrollbar, ttk.Scrollbar]:
+        y_scrollbar = ttk.Scrollbar(
+            parent_frame, orient=tk.VERTICAL, command=treeview.yview
         )
-        treeview_x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-        overview_metrics_treeview.configure(
-            yscrollcommand=treeview_y_scrollbar.set
+        x_scrollbar = ttk.Scrollbar(
+            parent_frame, orient=tk.HORIZONTAL, command=treeview.xview
         )
+        treeview.configure(
+            yscrollcommand=y_scrollbar.set, xscrollcommand=x_scrollbar.set
+        )
+        return y_scrollbar, x_scrollbar
 
-        overview_metrics_names_treeview.pack(
-            side=tk.LEFT,
-            fill=tk.Y,
-            expand=True,
-            padx=5,
-            pady=2
-        )
-        overview_metrics_treeview.pack(
-            side=tk.LEFT,
-            fill=tk.Y,
-            expand=True,
-            padx=5,
-            pady=2
-        )
-
-        return overview_metrics_treeview
-
-    def create_tasks_treeview_widget(self) -> ttk.Treeview:
-        treeview_frame = ttk.LabelFrame(
-            self.tasks_frame,
-            text='Lista de Atividades',
-            padding=10
-        )
+    def create_tasks_treeview_widget(
+        self, tasks: pd.DataFrame
+    ) -> ttk.Treeview:
+        treeview_frame = self._create_tasks_treeview_frame()
         treeview_frame.pack(
-            side=tk.RIGHT,
-            anchor='e',
-            fill=tk.BOTH,
-            expand=True
+            side=tk.RIGHT, anchor='e', fill=tk.BOTH, expand=True
         )
 
-        columns = {
-            'task_name': 'Nome da Atividade',
-            'task_tag': 'Tipo',
-            'task_assignee': 'Responsável',
-            'task_backlog_date': 'Criação',
-            'task_start_date': 'Início',
-            'task_done_date': 'Conclusão',
-            'task_delivery_date': 'Entrega'
-        }
-
-        overview_task_list_treeview = ttk.Treeview(
-            treeview_frame,
-            columns=list(columns.keys()),
-            show='headings'
+        columns_names = tasks.columns.tolist()
+        task_list_treeview = self._create_tasks_treeview(
+            treeview_frame, columns_names
         )
 
-        for key, value in columns.items():
-            overview_task_list_treeview.heading(key, text=value)
-            overview_task_list_treeview.column(key, width=75, anchor='center')
-
-        treeview_scrollbar = ttk.Scrollbar(
-            treeview_frame,
-            orient=tk.VERTICAL,
-            command=overview_task_list_treeview.yview
+        scrollbar = self._create_tasks_treeview_scrollbar(
+            treeview_frame, task_list_treeview
         )
-        treeview_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        overview_task_list_treeview.pack(
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        task_list_treeview.pack(
             side=tk.RIGHT,
             anchor='e',
             fill=tk.BOTH,
@@ -157,52 +143,165 @@ class OverviewTab:
             padx=5,
             pady=2
         )
-        overview_task_list_treeview.configure(
-            yscrollcommand=treeview_scrollbar.set
-        )
 
-        return overview_task_list_treeview
+        return task_list_treeview
+
+    def _create_tasks_treeview_frame(self) -> ttk.LabelFrame:
+        treeview_frame = ttk.LabelFrame(
+            self.right_frame, text='Lista de task_name', padding=10
+        )
+        return treeview_frame
+
+    def _create_tasks_treeview(
+        self, parent_frame: ttk.Frame, columns: list[str]
+    ) -> ttk.Treeview:
+        treeview = ttk.Treeview(parent_frame, columns=columns, show='headings')
+
+        headers_text = [
+            'Atividade',
+            'Tipo',
+            'Responsável',
+            'Criação',
+            'Início',
+            'Conclusão',
+            'Entrega',
+            'Reaction Time',
+            'Cycle Time',
+            'Lead Time'
+        ]
+
+        self._treeview_sort_orders = {col: True for col in columns}
+
+        for col, header in zip(columns, headers_text):
+            treeview.heading(
+                col,
+                text=header,
+                command=lambda c=col: self._treeview_sort_column(
+                    treeview, c, self._treeview_sort_orders
+                ))
+            treeview.column(col, width=75, anchor='center')
+
+        return treeview
+
+    def _treeview_sort_column(
+        self, treeview: ttk.Treeview, col: str, sort_orders: dict
+    ):
+        data = []
+        for iid in treeview.get_children(''):
+            value = treeview.set(iid, col)
+            data.append((value, iid))
+
+        reverse_sort = sort_orders[col]
+        data.sort(key=lambda x: x[0], reverse=reverse_sort)
+
+        for index, (value, iid) in enumerate(data):
+            treeview.move(iid, '', index)
+
+        sort_orders[col] = not reverse_sort
+
+    def _create_tasks_treeview_scrollbar(
+        self, parent_frame: ttk.Frame, treeview: ttk.Treeview
+    ) -> ttk.Scrollbar:
+        scrollbar = ttk.Scrollbar(
+            parent_frame, orient=tk.VERTICAL, command=treeview.yview
+        )
+        treeview.configure(yscrollcommand=scrollbar.set)
+        return scrollbar
 
     def fill_task_list_treeview(
-        self, task_list_treeview: ttk.Treeview, tasks: List[Dict[str, str]]
+        self, task_list_treeview: ttk.Treeview, tasks: pd.DataFrame
     ):
-        for _, row in tasks.iterrows():
-            task_list_treeview.insert('', 'end', values=list(row))
+        style = ttk.Style()
+        odd_color = style.lookup('TFrame', 'background')
+        even_color = style.lookup('TCombobox', 'fieldbackground')
+
+        task_list_treeview.tag_configure('oddrow', background=odd_color)
+        task_list_treeview.tag_configure('evenrow', background=even_color)
+
+        for item in task_list_treeview.get_children():
+            task_list_treeview.delete(item)
+
+        for i, task in enumerate(tasks.itertuples(index=False)):
+            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            task_list_treeview.insert(
+                '', 'end', values=list(task), tags=(tag,)
+            )
+
+    def fill_metrics_treeview(
+        self,
+        statistics: pd.DataFrame,
+        overview_metrics_treeview: ttk.Treeview
+    ):
+        style = ttk.Style()
+        odd_color = style.colors.get('dark')
+        even_color = style.colors.get('secondary')
+
+        for tree in [overview_metrics_treeview, self.metrics_names_treeview]:
+            tree.tag_configure('oddrow', background=odd_color)
+            tree.tag_configure('evenrow', background=even_color)
+            for item in tree.get_children():
+                tree.delete(item)
+
+        new_columns = statistics.columns.tolist()
+        overview_metrics_treeview['columns'] = new_columns
+        for col in new_columns:
+            overview_metrics_treeview.heading(col, text=col)
+            overview_metrics_treeview.column(
+                col, width=125, anchor='center', stretch=False
+            )
+
+        for i, metric_row in enumerate(statistics.iterrows()):
+            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            formatted_values = []
+            for value in metric_row[1]:
+                if pd.isna(value):
+                    formatted_values.append('')
+                elif isinstance(value, (int, float)) and value == int(value):
+                    formatted_values.append(f'{int(value)}')
+                elif isinstance(value, float):
+                    formatted_values.append(f'{value:.2f}')
+                else:
+                    formatted_values.append(str(value))
+
+            overview_metrics_treeview.insert(
+                '', 'end', values=formatted_values, tags=(tag,)
+            )
+
+            self.metrics_names_treeview.insert(
+                '', 'end', text=metric_row[0], tags=(tag,)
+            )
 
     def create_controls_frame(self):
-        self.controls_frame = ttk.Frame(self.overview_frame, padding=10)
-        self.controls_frame.pack(
-            side=tk.TOP,
-            anchor='nw',
-            fill=tk.X,
-            expand=True
+        self.controls_frame = ttk.LabelFrame(
+            self.left_pwindow, padding=10, text='Filtros'
         )
+        self.left_pwindow.add(self.controls_frame)
 
     def create_date_filters_entries(self):
         current_year = datetime.now().year
         start_date = datetime(current_year, 1, 1)
         end_date = datetime.now()
 
-        start_date_entry = ttk.DateEntry(
+        self.start_date_entry = ttk.DateEntry(
             self.controls_frame,
             dateformat='%d/%m/%Y',
             width=10,
             startdate=start_date
         )
-        end_date_entry = ttk.DateEntry(
+        self.end_date_entry = ttk.DateEntry(
             self.controls_frame,
             dateformat='%d/%m/%Y',
             startdate=end_date
         )
 
-        start_date_entry.grid(
+        self.start_date_entry.grid(
             row=0,
             column=0,
             padx=5,
             pady=2,
             sticky='ew'
         )
-        end_date_entry.grid(
+        self.end_date_entry.grid(
             row=1,
             column=0,
             padx=5,
@@ -211,14 +310,14 @@ class OverviewTab:
         )
 
     def create_tag_filter(self, tags: List[str]):
-        tag_filter_combobox = ttk.Combobox(
+        self.tag_filter_combobox = ttk.Combobox(
             self.controls_frame,
-            values=tags,
+            values=['Todos'] + tags,
             state='readonly',
             width=20
         )
-
-        tag_filter_combobox.grid(
+        self.tag_filter_combobox.set('Todos')
+        self.tag_filter_combobox.grid(
             row=0,
             column=1,
             padx=5,
@@ -227,14 +326,15 @@ class OverviewTab:
         )
 
     def create_assignee_filter(self, assignees: List[str]):
-        assignees_filter_combobox = ttk.Combobox(
+        self.assignees_filter_combobox = ttk.Combobox(
             self.controls_frame,
-            values=assignees,
+            values=['Todos'] + assignees,
             state='readonly',
             width=20
         )
 
-        assignees_filter_combobox.grid(
+        self.assignees_filter_combobox.set('Todos')
+        self.assignees_filter_combobox.grid(
             row=1,
             column=1,
             padx=5,
@@ -242,14 +342,15 @@ class OverviewTab:
             sticky='ew'
         )
 
-    def create_btns(self):
+    def create_btns(self, apply_filters_command):
         edit_db_btn = ttk.Button(
             self.controls_frame,
-            text='Editar atividades'
+            text='Editar Atividades'
         )
         apply_filters_btn = ttk.Button(
             self.controls_frame,
-            text='Aplicar filtros'
+            text='Aplicar filtros',
+            command=apply_filters_command
         )
 
         edit_db_btn.grid(
