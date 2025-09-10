@@ -88,6 +88,32 @@ class Controller:
 
         self.filtered_df = filtered_df
         self._update_overview_data()
+        self._update_tag_tab_data()
+
+    def _update_tag_tab_data(self):
+        if self.filtered_df.empty:
+            return
+
+        tags = self.filtered_df['task_tag'].unique().tolist()
+        for tag in tags:
+            if tag in self.mw.tag_tabs:
+                tag_df = self.filtered_df[
+                    self.filtered_df['task_tag'] == tag
+                ]
+
+                rt_fit = self.sdf.get_loess_fit(
+                    tag_df, 'task_reaction_time'
+                )
+                ct_fit = self.sdf.get_loess_fit(
+                    tag_df, 'task_cycle_time'
+                )
+                lt_fit = self.sdf.get_loess_fit(
+                    tag_df, 'task_lead_time'
+                )
+
+                self.mw.tag_tabs[tag].update_plots(
+                    tag_df, rt_fit, ct_fit, lt_fit
+                )
 
     def _update_overview_data(self):
         if self.filtered_df.empty:
@@ -220,6 +246,8 @@ class Controller:
             ['Todos'] + self.tasks_df['task_assignee'].unique().tolist()
         )
         dpg.configure_item("tag_filter_combo", items=updated_tags)
-        dpg.configure_item("assignee_filter_combo", items=updated_assignees)
+        dpg.configure_item(
+            "overview_assignee_filter_combo", items=updated_assignees
+        )
 
         self.apply_filters()

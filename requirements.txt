@@ -2,3 +2,5 @@ pandas
 openpyxl
 dearpygui
 holidays
+scikit-learn==1.5.0
+statsmodels

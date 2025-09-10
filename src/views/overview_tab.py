@@ -41,8 +41,8 @@ class OverviewTab:
                     self._create_tasks_table(sort_tasks_callback)
 
     def get_filter_values(self) -> Dict:
-        start_date_dict = dpg.get_value("start_date_picker")
-        end_date_dict = dpg.get_value("end_date_picker")
+        start_date_dict = dpg.get_value("overview_start_date_picker")
+        end_date_dict = dpg.get_value("overview_end_date_picker")
 
         return {
             "start_date": datetime(
@@ -56,7 +56,7 @@ class OverviewTab:
                 end_date_dict['month_day']
             ),
             "tag": dpg.get_value("tag_filter_combo"),
-            "assignee": dpg.get_value("assignee_filter_combo")
+            "assignee": dpg.get_value("overview_assignee_filter_combo")
         }
 
     def update_metrics_table(self, statistics_df: pd.DataFrame):
@@ -125,12 +125,12 @@ class OverviewTab:
             }
 
             dpg.add_date_picker(
-                label="Início", tag="start_date_picker",
+                label="Início", tag="overview_start_date_picker",
                 default_value=start_date_dict
             )
 
             dpg.add_date_picker(
-                label="Fim", tag="end_date_picker",
+                label="Fim", tag="overview_end_date_picker",
                 default_value=end_date_dict
             )
 
@@ -140,8 +140,10 @@ class OverviewTab:
                     tag="tag_filter_combo", default_value='Todos', width=200
                 )
                 dpg.add_combo(
-                    label="Responsável", items=['Todos'] + assignees,
-                    tag="assignee_filter_combo", default_value='Todos',
+                    label="Responsável",
+                    items=['Todos'] + assignees,
+                    tag="overview_assignee_filter_combo",
+                    default_value='Todos',
                     width=200
                 )
 

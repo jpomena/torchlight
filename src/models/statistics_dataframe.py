@@ -1,8 +1,9 @@
 import pandas as pd
-from typing import Dict
+from typing import Dict, Tuple, List
 from sklearn.linear_model import LinearRegression
 from datetime import datetime
 from ..utils.date_helper import get_business_days
+import statsmodels.api as sm
 
 
 class StatisticsDataframe:
@@ -136,6 +137,35 @@ class StatisticsDataframe:
             takt_times[tag] = tag_takt_time
 
         return takt_times
+
+    def get_loess_fit(
+        self,
+        tasks: pd.DataFrame,
+        time_metric: str,
+        date_column: str = 'task_delivery_date',
+        frac: float = 0.5
+    ) -> Tuple[List[datetime], List[float]]:
+
+        if tasks.empty or tasks[time_metric].isnull().all():
+            return [], []
+
+        df = tasks.dropna(subset=[time_metric, date_column]).copy()
+        if df.shape[0] < 2:
+            return [], []
+
+        df_sorted = df.sort_values(by=date_column)
+
+        x_data = pd.to_numeric(df_sorted[date_column])
+        y_data = df_sorted[time_metric]
+
+        loess_results = sm.nonparametric.lowess(
+            y_data, x_data, frac=frac, it=0
+        )
+
+        x_fit = [pd.to_datetime(val) for val in loess_results[:, 0]]
+        y_fit = loess_results[:, 1]
+
+        return x_fit, y_fit
 
     def fill_task_count(
         self,

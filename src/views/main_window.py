@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 from typing import List, Callable
 from .overview_tab import OverviewTab
 from .scrapper_window import ScrapperWindow
+from .tag_tab import TagTab
 
 
 class MainWindow:
@@ -9,6 +10,7 @@ class MainWindow:
         self.overview_tab = OverviewTab()
         self.edit_db_window_tag = 'edit_db_window'
         self.scrapper_window = ScrapperWindow()
+        self.tag_tabs = {}
 
     def create_main_window(
         self,
@@ -33,6 +35,11 @@ class MainWindow:
                     sort_tasks_callback=sort_tasks_callback,
                     edit_db_window_callback=edit_db_window_callback
                 )
+                for tag in tags:
+                    if tag != 'Todos':
+                        tag_tab = TagTab()
+                        tag_tab.create_tab(tag, assignees)
+                        self.tag_tabs[tag] = tag_tab
 
         dpg.set_primary_window("primary_window", True)
 

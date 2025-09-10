@@ -1,0 +1,173 @@
+import dearpygui.dearpygui as dpg
+from typing import List
+from datetime import datetime
+import pandas as pd
+import time
+
+
+class TagTab:
+    def __init__(self):
+        self.tag_name = None
+        self.plot_tags = {}
+
+    def create_tab(self, tag_name, assignees: List[str]):
+        self.tag_name = tag_name
+        with dpg.tab(label=self.tag_name):
+            with dpg.group():
+                with dpg.group(
+                    horizontal=True, tag=f'{self.tag_name}_upper_pane'
+                ):
+                    self._create_controls_section(
+                        assignees
+                        )
+                    self._create_metrics_section()
+
+                with dpg.group(
+                    horizontal=True, tag=f'{self.tag_name}_lower_pane'
+                ):
+                    self._create_plots()
+
+    def update_plots(
+        self,
+        tasks_df: pd.DataFrame,
+        rt_fit: tuple,
+        ct_fit: tuple,
+        lt_fit: tuple
+    ):
+        if tasks_df.empty:
+            return
+
+        delivery_dates = [
+            time.mktime(d.timetuple())
+            for d in tasks_df['task_delivery_date']
+        ]
+        reaction_times = tasks_df['task_reaction_time'].tolist()
+        cycle_times = tasks_df['task_cycle_time'].tolist()
+        lead_times = tasks_df['task_lead_time'].tolist()
+
+        rt_x_fit, rt_y_fit = rt_fit
+        ct_x_fit, ct_y_fit = ct_fit
+        lt_x_fit, lt_y_fit = lt_fit
+
+        rt_x_fit = [time.mktime(d.timetuple()) for d in rt_x_fit]
+        ct_x_fit = [time.mktime(d.timetuple()) for d in ct_x_fit]
+        lt_x_fit = [time.mktime(d.timetuple()) for d in lt_x_fit]
+
+        dpg.set_value(self.plot_tags['rt_scatter'], [delivery_dates, reaction_times]) # noqa
+        dpg.set_value(self.plot_tags['rt_line'], [rt_x_fit, rt_y_fit])
+        dpg.set_value(self.plot_tags['ct_scatter'], [delivery_dates, cycle_times]) # noqa
+        dpg.set_value(self.plot_tags['ct_line'], [ct_x_fit, ct_y_fit])
+        dpg.set_value(self.plot_tags['lt_scatter'], [delivery_dates, lead_times]) # noqa
+        dpg.set_value(self.plot_tags['lt_line'], [lt_x_fit, lt_y_fit])
+
+        dpg.fit_axis_data(self.plot_tags['rt_x_axis'])
+        dpg.fit_axis_data(self.plot_tags['rt_y_axis'])
+        dpg.fit_axis_data(self.plot_tags['ct_x_axis'])
+        dpg.fit_axis_data(self.plot_tags['ct_y_axis'])
+        dpg.fit_axis_data(self.plot_tags['lt_x_axis'])
+        dpg.fit_axis_data(self.plot_tags['lt_y_axis'])
+
+    def _create_plots(self):
+        with dpg.tab_bar(parent=f'{self.tag_name}_lower_pane'):
+            # Reaction Time Plot
+            with dpg.tab(label="Reaction Time"):
+                with dpg.plot(label="Reaction Time", height=-1, width=-1):
+                    self.plot_tags['rt_x_axis'] = dpg.add_plot_axis(
+                        dpg.mvXAxis, label="Data de Entrega", time=True
+                    )
+                    self.plot_tags['rt_y_axis'] = dpg.add_plot_axis(
+                        dpg.mvYAxis, label="Dias"
+                    )
+                    self.plot_tags['rt_scatter'] = dpg.add_scatter_series(
+                        [], [], parent=self.plot_tags['rt_y_axis']
+                    )
+                    self.plot_tags['rt_line'] = dpg.add_line_series(
+                        [], [], parent=self.plot_tags['rt_y_axis']
+                    )
+
+            # Cycle Time Plot
+            with dpg.tab(label="Cycle Time"):
+                with dpg.plot(label="Cycle Time", height=-1, width=-1):
+                    self.plot_tags['ct_x_axis'] = dpg.add_plot_axis(
+                        dpg.mvXAxis, label="Data de Entrega", time=True
+                    )
+                    self.plot_tags['ct_y_axis'] = dpg.add_plot_axis(
+                        dpg.mvYAxis, label="Dias"
+                    )
+                    self.plot_tags['ct_scatter'] = dpg.add_scatter_series(
+                        [], [], parent=self.plot_tags['ct_y_axis']
+                    )
+                    self.plot_tags['ct_line'] = dpg.add_line_series(
+                        [], [], parent=self.plot_tags['ct_y_axis']
+                    )
+
+            # Lead Time Plot
+            with dpg.tab(label="Lead Time"):
+                with dpg.plot(label="Lead Time", height=-1, width=-1):
+                    self.plot_tags['lt_x_axis'] = dpg.add_plot_axis(
+                        dpg.mvXAxis, label="Data de Entrega", time=True
+                    )
+                    self.plot_tags['lt_y_axis'] = dpg.add_plot_axis(
+                        dpg.mvYAxis, label="Dias"
+                    )
+                    self.plot_tags['lt_scatter'] = dpg.add_scatter_series(
+                        [], [], parent=self.plot_tags['lt_y_axis']
+                    )
+                    self.plot_tags['lt_line'] = dpg.add_line_series(
+                        [], [], parent=self.plot_tags['lt_y_axis']
+                    )
+
+    def _create_controls_section(
+        self,
+        assignees: List[str]
+    ):
+        with dpg.group(horizontal=True, parent="upper_pane"):
+            current_year = datetime.now().year
+            start_date = datetime(current_year, 1, 1)
+            end_date = datetime.now()
+
+            start_date_dict = {
+                'month_day': start_date.day, 'year': start_date.year - 1900,
+                'month': start_date.month - 1
+            }
+            end_date_dict = {
+                'month_day': end_date.day, 'year': end_date.year - 1900,
+                'month': end_date.month - 1
+            }
+
+            dpg.add_date_picker(
+                label="Início", tag=f"{self.tag_name}_start_date_picker",
+                default_value=start_date_dict
+            )
+
+            dpg.add_date_picker(
+                label="Fim", tag=f"{self.tag_name}_end_date_picker",
+                default_value=end_date_dict
+            )
+
+            with dpg.group():
+                dpg.add_combo(
+                    label="Responsável",
+                    items=['Todos'] + assignees,
+                    tag=f"{self.tag_name}_assignee_filter_combo",
+                    default_value='Todos',
+                    width=200
+                )
+
+                dpg.add_spacer(height=5)
+
+                dpg.add_button(
+                    label="Aplicar Filtros",
+                    width=200
+                )
+
+    def _create_metrics_section(self):
+        with dpg.group(horizontal=True, parent='upper_pane'):
+            dpg.table(label='Reaction Time')
+            dpg.add_spacer(width=5)
+
+            dpg.table(label='Cycle Time')
+            dpg.add_spacer(width=5)
+
+            dpg.table(label='Lead Time')
+            dpg.add_spacer(width=5)
