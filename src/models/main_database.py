@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 
-class Database:
+class MainDatabase:
     def __init__(self):
         home_dir = pathlib.Path.home()
 
@@ -17,7 +17,7 @@ class Database:
         db_dir.mkdir(parents=True, exist_ok=True)
         self._db_file = db_dir / 'torchlight.db'
 
-        self.conn = sql.connect(self._db_file)
+        self.conn = sql.connect(self._db_file, check_same_thread=False)
         self.conn.execute('PRAGMA foreign_keys = ON;')
         self.cursor = self.conn.cursor()
 
@@ -64,3 +64,36 @@ class Database:
         tasks = pd.read_sql(get_tasks_data, self.conn)
 
         return tasks
+
+    def insert_scrapper_df(self, scrapper_df: pd.DataFrame):
+        insert_task_sql = '''
+            INSERT INTO tasks (task_name) VALUES (?)
+        '''
+
+        insert_task_info_sql = '''
+            INSERT INTO tasks_info(
+                task_id,
+                task_tag,
+                task_assignee,
+                task_backlog_date,
+                task_start_date,
+                task_done_date,
+                task_delivery_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        '''
+
+        for _, row in scrapper_df.iterrows():
+            self.cursor.execute(insert_task_sql, (row['task_name'],))
+            task_id = self.cursor.lastrowid
+
+            task_info_data = (
+                task_id,
+                row['task_tag'],
+                row['task_assignee'],
+                row['task_backlog_date'],
+                row['task_start_date'],
+                row['task_done_date'],
+                row['task_delivery_date']
+            )
+            self.cursor.execute(insert_task_info_sql, task_info_data)
+        self.conn.commit()

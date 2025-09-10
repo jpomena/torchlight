@@ -1,77 +1,115 @@
-from ..views.main_window import MainWindow
-from ..views.overview_tab import OverviewTab
-from ..models.database import Database
+import dearpygui.dearpygui as dpg
+import pandas as pd
+from ..models.main_database import MainDatabase
 from ..models.tasks_dataframe import TasksDataframe
 from ..models.statistics_dataframe import StatisticsDataframe
-import pandas as pd
-from datetime import datetime
+from ..views.main_window import MainWindow
+from .scrapper_controller import ScrapperController
 
 
 class Controller:
     def __init__(
         self,
-        database: Database,
+        database: MainDatabase,
         tasks_dataframe: TasksDataframe,
         statistics_dataframe: StatisticsDataframe,
-        main_window: MainWindow
+        main_window: MainWindow,
     ):
         self.db = database
-        self.mw = main_window
         self.tdf = tasks_dataframe
         self.sdf = statistics_dataframe
+        self.mw = main_window
+        self.scrapper_controller = ScrapperController(self.mw.scrapper_window)
+        self.tasks_df = None
+        self.filtered_df = None
 
-        self.create_dataframes()
-        self.create_overview_tab()
-        self.fill_overview_tab()
+    def initialize_view(self):
+        self._create_dataframes()
 
-    def create_dataframes(self):
+        tags = self.tasks_df['task_tag'].unique().tolist()
+        assignees = self.tasks_df['task_assignee'].unique().tolist()
+
+        self.mw.create_main_window(
+            tags=tags,
+            assignees=assignees,
+            apply_filters_callback=self.apply_filters,
+            sort_tasks_callback=self._on_sort_tasks,
+            edit_db_window_callback=self._toggle_edit_db_window,
+            open_import_window_callback=self._transition_to_extract_window
+        )
+
+        self.mw.scrapper_window.create_window(
+            start_callback=self.scrapper_controller.start_extraction,
+            stop_callback=self.scrapper_controller.stop_extraction,
+            edit_db_window_callback=(
+                self.scrapper_controller._populate_edit_db_window
+            ),
+            save_callback=self.scrapper_controller.save_edited_tasks,
+            import_callback=self.import_scrapper_df
+        )
+
+        self.apply_filters()
+
+    def _transition_to_extract_window(self):
+        dpg.configure_item(self.mw.edit_db_window_tag, show=False)
+        dpg.split_frame()
+        dpg.configure_item(self.mw.scrapper_window.window_tag, show=True)
+
+    def _create_dataframes(self):
         self.tasks_df = self.db.create_tasks_df()
         self.tdf.calculate_task_metrics(self.tasks_df)
-        self.statistics_df = self.sdf.create_statistics_df(self.tasks_df)
 
-    def create_overview_tab(self):
-        overview_tab_parent_frame = self.mw.create_overview_parent_frame()
-        self.overview_tab = OverviewTab(overview_tab_parent_frame)
-        self.tags = self.tasks_df['task_tag'].unique().tolist()
-        self.assignees = self.tasks_df['task_assignee'].unique().tolist()
-        self.overview_tab.create_paned_windows()
-        self.overview_tab.create_controls_frame()
-        self.overview_metrics_treeview = (
-            self.overview_tab.create_metrics_treeview_widget(
-                self.statistics_df
-            ))
-        self.overview_task_list_treeview = (
-            self.overview_tab.create_tasks_treeview_widget(self.tasks_df)
-        )
+    def apply_filters(self):
+        filter_values = self.mw.overview_tab.get_filter_values()
+        start_date = filter_values['start_date']
+        end_date = filter_values['end_date']
+        selected_tag = filter_values['tag']
+        selected_assignee = filter_values['assignee']
 
-        self.overview_tab.create_date_filters_entries()
-        self.overview_tab.create_tag_filter(self.tags)
-        self.overview_tab.create_assignee_filter(self.assignees)
-        self.overview_tab.create_btns(self.apply_filters)
+        filtered_df = self.tasks_df.copy()
 
-    def _update_overview_data(self, tasks_df: pd.DataFrame):
-        if tasks_df.empty:
-            self.overview_tab.fill_task_list_treeview(tasks_df)
-            self.overview_tab.fill_metrics_treeview(
-                self.statistics_df,
-                self.overview_metrics_treeview
-            )
+        delivery_dates = filtered_df['task_delivery_date']
+
+        valid_dates_mask = delivery_dates.notna()
+
+        filtered_df = filtered_df[
+            valid_dates_mask &
+            (delivery_dates >= start_date) &
+            (delivery_dates <= end_date)
+        ]
+
+        if selected_tag != 'Todos':
+            filtered_df = filtered_df[filtered_df['task_tag'] == selected_tag]
+
+        if selected_assignee != 'Todos':
+            filtered_df = filtered_df[
+                filtered_df['task_assignee'] == selected_assignee
+            ]
+
+        self.filtered_df = filtered_df
+        self._update_overview_data()
+
+    def _update_overview_data(self):
+        if self.filtered_df.empty:
+            empty_stats = self.sdf.create_statistics_df(self.filtered_df)
+            self.mw.overview_tab.update_metrics_table(empty_stats)
+            self.mw.overview_tab.update_tasks_table(self.filtered_df)
             return
 
-        self.overview_tab.fill_task_list_treeview(
-            self.overview_task_list_treeview, tasks_df
-        )
+        statistics_df = self._calculate_statistics(self.filtered_df)
 
+        self.mw.overview_tab.update_metrics_table(statistics_df)
+        self.mw.overview_tab.update_tasks_table(self.filtered_df)
+
+    def _calculate_statistics(self, tasks_df: pd.DataFrame) -> pd.DataFrame:
         statistics_df = self.sdf.create_statistics_df(tasks_df)
-
         tags_means = self.sdf.get_tags_means(tasks_df)
         tags_stdevs = self.sdf.get_tags_stdevs(tasks_df)
         tags_trends = self.sdf.get_tags_trends(tasks_df)
 
-        start_date_str = self.overview_tab.start_date_entry.entry.get()
-        end_date_str = self.overview_tab.end_date_entry.entry.get()
-        start_date = datetime.strptime(start_date_str, '%d/%m/%Y')
-        end_date = datetime.strptime(end_date_str, '%d/%m/%Y')
+        filter_values = self.mw.overview_tab.get_filter_values()
+        start_date = filter_values['start_date']
+        end_date = filter_values['end_date']
 
         tags_takt_times = self.sdf.get_tasks_takt_times(
             tasks_df, start_date, end_date
@@ -80,53 +118,108 @@ class Controller:
 
         self.sdf.fill_task_count(statistics_df, task_count_by_tag)
         self.sdf.fill_base_statistics(
-            statistics_df,
-            tags_means,
-            tags_stdevs,
-            tags_trends,
-            tags_takt_times,
+            statistics_df, tags_means, tags_stdevs,
+            tags_trends, tags_takt_times
         )
         self.sdf.fill_min_max_times(statistics_df)
         self.sdf.fill_percentages(tasks_df, statistics_df)
         self.sdf.format_numbers(statistics_df)
 
-        self.overview_tab.fill_metrics_treeview(
-            statistics_df, self.overview_metrics_treeview
-        )
+        return statistics_df
 
-    def fill_overview_tab(self):
-        self._update_overview_data(self.tasks_df)
+    def _on_sort_tasks(self, sender, sort_specs):
+        if sort_specs is None or self.filtered_df is None:
+            return
 
-    def apply_filters(self):
-        filtered_df = self.tasks_df.copy()
+        col_id, direction = sort_specs[0]
 
-        start_date_str = self.overview_tab.start_date_entry.entry.get()
-        end_date_str = self.overview_tab.end_date_entry.entry.get()
-        start_date = datetime.strptime(start_date_str, '%d/%m/%Y')
-        end_date = datetime.strptime(end_date_str, '%d/%m/%Y')
+        column_map = self.mw.overview_tab.get_tasks_table_column_map()
+        col_name = column_map.get(col_id)
 
-        delivery_dates = pd.to_datetime(
-            filtered_df['task_delivery_date'],
-            format='%d/%m/%Y',
-            errors='coerce'
-        )
+        if col_name:
+            df_to_sort = self.filtered_df.copy()
 
-        valid_dates_mask = delivery_dates.notna()
-        filtered_df = filtered_df[valid_dates_mask]
-        delivery_dates = delivery_dates[valid_dates_mask]
-
-        filtered_df = filtered_df[
-            (delivery_dates >= start_date) & (delivery_dates <= end_date)
-        ]
-
-        selected_tag = self.overview_tab.tag_filter_combobox.get()
-        if selected_tag != 'Todos':
-            filtered_df = filtered_df[filtered_df['task_tag'] == selected_tag]
-
-        selected_assignee = self.overview_tab.assignees_filter_combobox.get()
-        if selected_assignee != 'Todos':
-            filtered_df = filtered_df[
-                filtered_df['task_assignee'] == selected_assignee
+            date_columns = [
+                'task_backlog_date', 'task_start_date',
+                'task_done_date', 'task_delivery_date'
             ]
 
-        self._update_overview_data(filtered_df)
+            numeric_columns = [
+                'task_reaction_time', 'task_cycle_time', 'task_lead_time'
+            ]
+
+            og_date_format = None
+            if col_name in date_columns:
+                og_date_format = df_to_sort[col_name].copy()
+                df_to_sort[col_name] = pd.to_datetime(
+                    df_to_sort[col_name], format='%d/%m/%Y', errors='coerce'
+                )
+            elif col_name in numeric_columns:
+                df_to_sort[col_name] = pd.to_numeric(
+                    df_to_sort[col_name], errors='coerce'
+                )
+
+            df_to_sort.sort_values(
+                by=col_name,
+                ascending=(direction > 0),
+                inplace=True,
+                na_position='last'
+            )
+
+            if og_date_format is not None:
+                df_to_sort[col_name] = og_date_format.loc[df_to_sort.index]
+
+            self.mw.overview_tab.update_tasks_table(df_to_sort)
+
+    def _toggle_edit_db_window(self):
+        self._populate_edit_db_window()
+        dpg.configure_item(self.mw.edit_db_window_tag, show=True)
+
+    def _populate_edit_db_window(self):
+        table_tag = 'edit_db_table'
+        container_tag = 'edit_db_table_container'
+        headers = self.mw.overview_tab.headers_map
+        df = self.db.create_tasks_df()
+
+        if dpg.does_item_exist(table_tag):
+            dpg.delete_item(table_tag)
+
+        with dpg.table(
+            header_row=True,
+            resizable=True,
+            policy=dpg.mvTable_SizingStretchSame,
+            freeze_rows=1,
+            scrollY=True,
+            row_background=True,
+            borders_outerH=True,
+            borders_innerV=True,
+            borders_innerH=True,
+            borders_outerV=True,
+            tag=table_tag,
+            parent=container_tag
+        ):
+            for col in df.columns:
+                dpg.add_table_column(label=headers.get(col, col))
+
+            for i, row in df.iterrows():
+                with dpg.table_row():
+                    for j, item in enumerate(row):
+                        dpg.add_input_text(
+                            default_value=str(item), tag=f'cell_{i}_{j}'
+                        )
+
+    def import_scrapper_df(self):
+        scrapper_df = self.scrapper_controller.get_scrapper_df()
+        self.db.insert_scrapper_df(scrapper_df)
+        self.scrapper_controller.empty_database()
+
+        self._create_dataframes()
+
+        updated_tags = ['Todos'] + self.tasks_df['task_tag'].unique().tolist()
+        updated_assignees = (
+            ['Todos'] + self.tasks_df['task_assignee'].unique().tolist()
+        )
+        dpg.configure_item("tag_filter_combo", items=updated_tags)
+        dpg.configure_item("assignee_filter_combo", items=updated_assignees)
+
+        self.apply_filters()

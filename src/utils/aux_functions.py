@@ -1,20 +1,32 @@
-from typing import List, Dict
+from selenium.webdriver.support.ui import WebDriverWait
+from collections import defaultdict
+from datetime import datetime
 
-def synthetize_tag_overview_metrics(
-    tasks: List[Dict[str, str | int]],
-    tasks_means: Dict[str, float],
-    tasks_stdevs: Dict[str, float],
-    task_trend: float,
-    interval_end_date,
-    interval_start_date
-):
-    tag_overview_metrics = []
-    tag_takt_time = interval_end_date - interval_start_date
-    task_lead_time_trend = task_trend
-    min_reaction_time = tag_reaction_time_mean - tag_reaction_time_stdev
-    max_reaction_time = tag_reaction_time_mean + tag_reaction_time_stdev
-    min_cycle_time = tag_cycle_time_mean - tag_cycle_time_stdev
-    max_cycle_time = tag_cycle_time_mean + tag_cycle_time_stdev
-    min_lead_time = tag_lead_time_mean - tag_lead_time_stdev
-    max_lead_time = tag_lead_time_mean + tag_lead_time_stdev
-    under_min_reaction_time = sum(meets_condition)
+_subscribers = defaultdict(list)
+
+
+def subscribe(event_type: str, fn):
+    _subscribers[event_type].append(fn)
+
+
+def publish(event_type: str, data):
+    if event_type not in _subscribers:
+        return
+
+    for fn in _subscribers[event_type]:
+        fn(data)
+
+
+def log(message: str):
+    now = datetime.now().strftime("%H:%M:%S")
+    log_entry = f"[{now}] {message}"
+    publish("log", log_entry)
+
+
+def wait(driver, HTML_element=None, timeout=None):
+    if not timeout:
+        timeout = 45
+    if not HTML_element:
+        return WebDriverWait(driver, timeout)
+    else:
+        return WebDriverWait(HTML_element, timeout)

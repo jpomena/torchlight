@@ -2,6 +2,7 @@ import pandas as pd
 from typing import Dict
 from sklearn.linear_model import LinearRegression
 from datetime import datetime
+from ..utils.date_helper import get_business_days
 
 
 class StatisticsDataframe:
@@ -11,28 +12,28 @@ class StatisticsDataframe:
         columns = tasks['task_tag'].drop_duplicates().tolist()
         rows = [
             'Demandas Fechadas',
-            'μ RT (d)',
-            'σ RT (d)',
+            'Média RT (d)',
+            'Desv. Pad. RT (d)',
             'RT Mín. (d)',
             'RT Máx. (d)',
             '< RT Mín.',
-            '<= μ RT',
+            '<= Média RT',
             '<= RT Máx.',
             'm RT',
-            'μ CT (d)',
-            'σ CT (d)',
+            'Média CT (d)',
+            'Desv. Pad. CT (d)',
             'CT Mín. (d)',
             'CT Máx. (d)',
             '< CT Mín.',
-            '<= μ CT',
+            '<= Média CT',
             '<= CT Máx.',
             'm CT',
-            'μ LT (d)',
-            'σ LT (d)',
+            'Média LT (d)',
+            'Desv. Pad. LT (d)',
             'LT Mín. (d)',
             'LT Máx. (d)',
             '< LT Mín.',
-            '<= μ LT',
+            '<= Média LT',
             '<= LT Máx.',
             'm LT',
             'TT (d)',
@@ -121,7 +122,7 @@ class StatisticsDataframe:
         tags = tasks['task_tag'].unique().tolist()
         takt_times = {}
 
-        time_interval = (end_date - start_date).days
+        time_interval = get_business_days(start_date.date(), end_date.date())
 
         for tag in tags:
             filtered_tasks_df = tasks[tasks['task_tag'] == tag]
@@ -160,10 +161,10 @@ class StatisticsDataframe:
 
         for key, value in metrics_names.items():
 
-            statistics.loc[f'μ {key} (d)'] = {
+            statistics.loc[f'Média {key} (d)'] = {
                 tag: means[tag][f'{value}_mean'] for tag in tags
             }
-            statistics.loc[f'σ {key} (d)'] = {
+            statistics.loc[f'Desv. Pad. {key} (d)'] = {
                 tag: stdevs[tag][f'{value}_stdev'] for tag in tags
             }
             statistics.loc[f'm {key}'] = {
@@ -175,10 +176,10 @@ class StatisticsDataframe:
     def fill_min_max_times(self, statistics: pd.DataFrame):
         for metric in ['RT', 'CT', 'LT']:
             statistics.loc[f'{metric} Mín. (d)'] = (
-                statistics.loc[f'μ {metric} (d)'] - statistics.loc[f'σ {metric} (d)']  # noqa: E501
+                statistics.loc[f'Média {metric} (d)'] - statistics.loc[f'Desv. Pad. {metric} (d)']  # noqa: E501
             ).clip(lower=1)
             statistics.loc[f'{metric} Máx. (d)'] = (
-                statistics.loc[f'μ {metric} (d)'] + statistics.loc[f'σ {metric} (d)']  # noqa: E501
+                statistics.loc[f'Média {metric} (d)'] + statistics.loc[f'Desv. Pad. {metric} (d)']  # noqa: E501
             )
 
     def format_numbers(self, statistics: pd.DataFrame):
@@ -204,7 +205,7 @@ class StatisticsDataframe:
         times = ['reaction', 'cycle', 'lead']
         metrics_short = ['RT', 'CT', 'LT']
         under_min_rows = ['< RT Mín.', '< CT Mín.', '< LT Mín.']
-        under_mean_rows = ['<= μ RT', '<= μ CT', '<= μ LT']
+        under_mean_rows = ['<= Média RT', '<= Média CT', '<= Média LT']
         under_max_rows = ['<= RT Máx.', '<= CT Máx.', '<= LT Máx.']
 
         for tag in tags:
@@ -229,7 +230,7 @@ class StatisticsDataframe:
         for tag in tags:
             for percentage, metric, metric_short in zip(under_mean_rows, times, metrics_short):  # noqa: E501
                 min_value = statistics.loc[
-                    f'μ {metric_short} (d)', tag
+                    f'Média {metric_short} (d)', tag
                 ]
 
                 tag_mask = tasks['task_tag'] == tag
