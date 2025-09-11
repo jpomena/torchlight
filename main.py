@@ -11,7 +11,7 @@ def main():
     dpg.create_viewport(title='Torchlight v0.2', width=1600, height=900)
 
     with dpg.font_registry():
-        font_path = 'src/assets/Quicksand-Bold.otf'
+        font_path = 'src/assets/Truetypewriter.ttf'
         font_size = 14
         with dpg.font(font_path, font_size, tag="default_font"):
             dpg.add_font_range(0x0020, 0x00FF)
@@ -23,7 +23,75 @@ def main():
     with dpg.theme() as global_theme:
 
         with dpg.theme_component(dpg.mvAll):
-            # dpg.add_theme_color(dpg.mvThemeCol_Text, (224, 211, 175))
+            dpg.add_theme_color(
+                dpg.mvThemeCol_WindowBg, (254, 254, 254, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_ChildBg, (254, 254, 254, 255)
+            )
+            dpg.add_theme_color(dpg.mvThemeCol_PopupBg, (254, 254, 254, 255))
+            dpg.add_theme_color(dpg.mvThemeCol_Text, (0, 0, 0, 255))
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_TextDisabled, (80, 80, 80, 255)
+            )
+
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_Button, (235, 235, 235, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_ButtonHovered, (200, 30, 30, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_ButtonActive, (160, 0, 0, 255)
+            )
+
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_FrameBg, (235, 235, 235, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_FrameBgHovered, (220, 220, 220, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_FrameBgActive, (200, 30, 30, 255)
+            )
+
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_ScrollbarBg, (240, 240, 240, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_ScrollbarGrab, (200, 30, 30, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_ScrollbarGrabHovered, (160, 0, 0, 255)
+            )
+
+            dpg.add_theme_color(dpg.mvThemeCol_Tab, (240, 240, 240, 255))
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_TableHeaderBg, (245, 245, 245, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_TableBorderStrong, (200, 200, 200, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_TableBorderLight, (230, 230, 230, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_TableRowBg, (254, 254, 254, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_TableRowBgAlt, (248, 248, 248, 255)
+            )
+
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_Header, (235, 235, 235, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_HeaderHovered, (200, 30, 30, 255)
+            )
+            dpg.add_theme_color(
+                    dpg.mvThemeCol_HeaderActive, (160, 0, 0, 255)
+            )
+
             dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 12)
             dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 12)
             dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 12)
@@ -31,6 +99,7 @@ def main():
             dpg.add_theme_style(dpg.mvStyleVar_ScrollbarRounding, 12)
             dpg.add_theme_style(dpg.mvStyleVar_GrabRounding, 12)
             dpg.add_theme_style(dpg.mvStyleVar_TabRounding, 12)
+
     dpg.bind_theme(global_theme)
 
     dpg.setup_dearpygui()

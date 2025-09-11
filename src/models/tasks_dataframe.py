@@ -17,25 +17,36 @@ class TasksDataframe:
                 tasks[col], format='%d/%m/%Y', errors='coerce'
             )
 
-        tasks['task_reaction_time'] = tasks.apply(
-            lambda row: get_business_days(
-                row['task_backlog_date'].date(), row['task_start_date'].date()
-            ),
-            axis=1
-        )
-        tasks['task_cycle_time'] = tasks.apply(
-            lambda row: get_business_days(
-                row['task_start_date'].date(), row['task_done_date'].date()
-            ),
-            axis=1
-        )
-        tasks['task_lead_time'] = tasks.apply(
-            lambda row: get_business_days(
-                row['task_backlog_date'].date(),
-                row['task_delivery_date'].date()
-            ),
-            axis=1
-        )
+        def calculate_reaction_time(row):
+            backlog_date = row['task_backlog_date']
+            start_date = row['task_start_date']
+            if pd.isna(backlog_date) is False and pd.isna(start_date) is False:
+                return get_business_days(
+                    backlog_date.date(), start_date.date()
+                                         )
+            return pd.NA
+
+        def calculate_cycle_time(row):
+            start_date = row['task_start_date']
+            done_date = row['task_done_date']
+            if pd.isna(start_date) is False and pd.isna(done_date) is False:
+                return get_business_days(start_date.date(), done_date.date())
+            return pd.NA
+
+        def calculate_lead_time(row):
+            backlog_date = row['task_backlog_date']
+            delivery_date = row['task_delivery_date']
+            if pd.isna(backlog_date) is False and pd.isna(delivery_date) is False:  # noqa: E501
+                return get_business_days(
+                    backlog_date.date(), delivery_date.date()
+                                         )
+            return pd.NA
+
+        tasks['task_reaction_time'] = (
+            tasks.apply(calculate_reaction_time, axis=1)
+                                       )
+        tasks['task_cycle_time'] = tasks.apply(calculate_cycle_time, axis=1)
+        tasks['task_lead_time'] = tasks.apply(calculate_lead_time, axis=1)
 
     def get_task_count_by_tag(self, tasks: pd.DataFrame) -> Dict[str, int]:
         tags = tasks['task_tag'].unique().tolist()
