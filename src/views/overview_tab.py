@@ -32,10 +32,12 @@ class OverviewTab:
         with dpg.tab(label="Visão Geral"):
             with dpg.group(horizontal=True):
                 with dpg.child_window(width=700, tag="left_pane"):
+                    dpg.add_spacer(width=5)
                     self._create_controls_section(
                         tags, assignees,
                         apply_filters_callback, edit_db_window_callback
                     )
+                    dpg.add_spacer(width=5)
                     self._create_metrics_table()
                 with dpg.child_window(tag="right_pane"):
                     self._create_tasks_table(sort_tasks_callback)
@@ -128,19 +130,20 @@ class OverviewTab:
                 label="Início", tag="overview_start_date_picker",
                 default_value=start_date_dict
             )
-
+            dpg.add_spacer(width=10)
             dpg.add_date_picker(
                 label="Fim", tag="overview_end_date_picker",
                 default_value=end_date_dict
             )
+            dpg.add_spacer(width=20)
 
             with dpg.group():
                 dpg.add_combo(
-                    label="Tag", items=['Todos'] + tags,
+                    label="Tipo", items=['Todos'] + tags,
                     tag="tag_filter_combo", default_value='Todos', width=200
                 )
                 dpg.add_combo(
-                    label="Responsável",
+                    label="Resp.",
                     items=['Todos'] + assignees,
                     tag="overview_assignee_filter_combo",
                     default_value='Todos',

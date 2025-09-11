@@ -17,6 +17,7 @@ class MainWindow:
         tags: List[str],
         assignees: List[str],
         apply_filters_callback: Callable,
+        apply_tag_filters_callback: Callable,
         sort_tasks_callback: Callable,
         edit_db_window_callback: Callable,
         open_import_window_callback: Callable,
@@ -39,7 +40,9 @@ class MainWindow:
                 for tag in tags:
                     if tag != 'Todos':
                         tag_tab = TagTab()
-                        tag_tab.create_tab(tag, assignees)
+                        tag_tab.create_tab(
+                            tag, assignees, apply_tag_filters_callback
+                        )
                         self.tag_tabs[tag] = tag_tab
 
         dpg.set_primary_window("primary_window", True)

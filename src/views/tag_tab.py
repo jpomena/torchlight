@@ -1,5 +1,5 @@
 import dearpygui.dearpygui as dpg
-from typing import List
+from typing import List, Callable, Dict
 from datetime import datetime
 import pandas as pd
 import time
@@ -11,17 +11,23 @@ class TagTab:
         self.plot_tags = {}
         self.metric_table_tags = {}
 
-    def create_tab(self, tag_name, assignees: List[str]):
+    def create_tab(
+        self,
+        tag_name,
+        assignees: List[str],
+        apply_filters_callback: Callable
+    ):
         self.tag_name = tag_name
         with dpg.tab(label=self.tag_name):
             with dpg.group():
+                dpg.add_spacer(width=5)
                 with dpg.group(
                     horizontal=True, tag=f'{self.tag_name}_upper_pane'
                 ):
                     self._create_controls_section(
-                        assignees
+                        assignees, apply_filters_callback
                         )
-                    dpg.add_spacer(width=10)
+                    dpg.add_spacer(width=50)
                     self._create_metrics_section()
 
                 with dpg.group(
@@ -68,6 +74,26 @@ class TagTab:
         dpg.fit_axis_data(self.plot_tags['ct_y_axis'])
         dpg.fit_axis_data(self.plot_tags['lt_x_axis'])
         dpg.fit_axis_data(self.plot_tags['lt_y_axis'])
+
+    def get_filter_values(self) -> Dict:
+        start_date_dict = dpg.get_value(f"{self.tag_name}_start_date_picker")
+        end_date_dict = dpg.get_value(f"{self.tag_name}_end_date_picker")
+
+        return {
+            "start_date": datetime(
+                start_date_dict['year'] + 1900,
+                start_date_dict['month'] + 1,
+                start_date_dict['month_day']
+            ),
+            "end_date": datetime(
+                end_date_dict['year'] + 1900,
+                end_date_dict['month'] + 1,
+                end_date_dict['month_day']
+            ),
+            "assignee": dpg.get_value(
+                f"{self.tag_name}_assignee_filter_combo"
+            )
+        }
 
     def update_metrics_tables(self, statistics_df: pd.DataFrame):
         metrics_map = {
@@ -160,7 +186,8 @@ class TagTab:
 
     def _create_controls_section(
         self,
-        assignees: List[str]
+        assignees: List[str],
+        apply_filters_callback: Callable
     ):
         with dpg.group(
             horizontal=True, parent=f'{self.tag_name}_upper_pane'
@@ -204,7 +231,8 @@ class TagTab:
 
                 dpg.add_button(
                     label="Aplicar Filtros",
-                    width=200
+                    width=200,
+                    callback=lambda: apply_filters_callback(self.tag_name)
                 )
 
     def _create_metrics_section(self):
@@ -221,19 +249,27 @@ class TagTab:
 
             dpg.add_table(
                 header_row=True, tag=rt_table_tag,
+                borders_outerH=True, borders_innerV=True,
+                borders_innerH=True, borders_outerV=True,
                 policy=dpg.mvTable_SizingFixedFit,
-                height=250, width=150
+                row_background=True,
+                height=225, width=175
             )
             dpg.add_spacer(width=5)
             dpg.add_table(
                 header_row=True, tag=ct_table_tag,
+                borders_outerH=True, borders_innerV=True,
+                borders_innerH=True, borders_outerV=True,
                 policy=dpg.mvTable_SizingFixedFit,
-                height=250, width=150
+                row_background=True,
+                height=225, width=175
             )
             dpg.add_spacer(width=5)
             dpg.add_table(
                 header_row=True, tag=lt_table_tag,
+                borders_outerH=True, borders_innerV=True,
+                borders_innerH=True, borders_outerV=True,
                 policy=dpg.mvTable_SizingFixedFit,
-                height=250, width=150
+                row_background=True,
+                height=225, width=175
             )
-            dpg.add_spacer(width=5)

@@ -221,6 +221,10 @@ class StatisticsDataframe:
             elif row.name == 'Demandas Fechadas':
                 filled_row = numeric_row.fillna(0)
                 return filled_row.astype(int)
+            elif '<' in row.name:
+                return numeric_row.round(1).apply(
+                    lambda x: f'{x} %' if pd.notna(x) else ''
+                )
             else:
                 return numeric_row.round(1)
 

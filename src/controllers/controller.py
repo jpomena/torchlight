@@ -28,13 +28,14 @@ class Controller:
     def initialize_view(self):
         self._create_dataframes()
 
-        tags = self.tasks_df['task_tag'].unique().tolist()
+        tags = sorted(self.tasks_df['task_tag'].unique().tolist())
         assignees = self.tasks_df['task_assignee'].unique().tolist()
 
         self.mw.create_main_window(
             tags=tags,
             assignees=assignees,
             apply_filters_callback=self.apply_filters,
+            apply_tag_filters_callback=self.apply_tag_filters,
             sort_tasks_callback=self._on_sort_tasks,
             edit_db_window_callback=self._toggle_edit_db_window,
             open_import_window_callback=self._transition_to_extract_window,
@@ -92,7 +93,62 @@ class Controller:
         self.filtered_df = filtered_df
         self._update_overview_data()
         self._update_tag_tab_data()
-        self._update_tag_tab_data()
+
+    def apply_tag_filters(self, tag_name: str):
+        tag_tab = self.mw.tag_tabs.get(tag_name)
+        if not tag_tab:
+            return
+
+        filter_values = tag_tab.get_filter_values()
+        start_date = filter_values['start_date']
+        end_date = filter_values['end_date']
+        selected_assignee = filter_values['assignee']
+
+        tag_specific_df = self.tasks_df[self.tasks_df['task_tag'] == tag_name].copy() # noqa
+
+        delivery_dates = tag_specific_df['task_delivery_date']
+        valid_dates_mask = delivery_dates.notna()
+
+        filtered_df = tag_specific_df[
+            valid_dates_mask &
+            (delivery_dates >= start_date) &
+            (delivery_dates <= end_date)
+        ]
+
+        if selected_assignee != 'Todos':
+            filtered_df = filtered_df[
+                filtered_df['task_assignee'] == selected_assignee
+            ]
+
+        if filtered_df.empty:
+            return
+
+        statistics_df = self._calculate_statistics(filtered_df)
+
+        rt_fit = self.sdf.get_loess_fit(
+            filtered_df, 'task_reaction_time'
+        )
+        ct_fit = self.sdf.get_loess_fit(
+            filtered_df, 'task_cycle_time'
+        )
+        lt_fit = self.sdf.get_loess_fit(
+            filtered_df, 'task_lead_time'
+        )
+
+        tag_tab.update_plots(filtered_df, rt_fit, ct_fit, lt_fit)
+        tag_tab.update_metrics_tables(statistics_df)
+
+    def _update_overview_data(self):
+        if self.filtered_df.empty:
+            empty_stats = self.sdf.create_statistics_df(self.filtered_df)
+            self.mw.overview_tab.update_metrics_table(empty_stats)
+            self.mw.overview_tab.update_tasks_table(self.filtered_df)
+            return
+
+        statistics_df = self._calculate_statistics(self.filtered_df)
+
+        self.mw.overview_tab.update_metrics_table(statistics_df)
+        self.mw.overview_tab.update_tasks_table(self.filtered_df)
 
     def _update_tag_tab_data(self):
         if self.filtered_df.empty:
@@ -121,18 +177,6 @@ class Controller:
                     tag_df, rt_fit, ct_fit, lt_fit
                 )
                 self.mw.tag_tabs[tag].update_metrics_tables(statistics_df)
-
-    def _update_overview_data(self):
-        if self.filtered_df.empty:
-            empty_stats = self.sdf.create_statistics_df(self.filtered_df)
-            self.mw.overview_tab.update_metrics_table(empty_stats)
-            self.mw.overview_tab.update_tasks_table(self.filtered_df)
-            return
-
-        statistics_df = self._calculate_statistics(self.filtered_df)
-
-        self.mw.overview_tab.update_metrics_table(statistics_df)
-        self.mw.overview_tab.update_tasks_table(self.filtered_df)
 
     def _calculate_statistics(self, tasks_df: pd.DataFrame) -> pd.DataFrame:
         statistics_df = self.sdf.create_statistics_df(tasks_df)
