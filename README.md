@@ -1,103 +1,100 @@
 # Torchlight
 
-**Torchlight** é uma aplicação de desktop desenvolvida em Python para extrair, analisar e visualizar dados de gerenciamento de tarefas da plataforma ClickUp. A ferramenta automatiza a coleta de dados, calcula métricas de desempenho chave (como Reaction Time, Cycle Time e Lead Time) e apresenta as informações em um dashboard interativo.
+Torchlight is a Python-based desktop application for extracting, analyzing, and visualizing task management data from the ClickUp platform. The tool automates data collection, calculates key performance metrics (such as Reaction Time, Cycle Time, and Lead Time), and presents the information in an interactive dashboard.
 
-## Visão Geral
+## Overview
 
-O objetivo do Torchlight é fornecer insights sobre o fluxo de trabalho de equipes, permitindo uma análise detalhada da eficiência e produtividade. Através de uma interface gráfica intuitiva, os usuários podem filtrar tarefas por período, tag ou responsável, e visualizar tanto dados estatísticos consolidados quanto gráficos de tendência.
+The primary goal of Torchlight is to provide insights into a team's workflow, enabling a detailed analysis of efficiency and productivity. Through an intuitive graphical interface, users can filter tasks by period, tag, or assignee, and view both consolidated statistical data and trend graphs.
 
-## Funcionalidades
+## Features
 
-- **Extração de Dados do ClickUp**: Automatiza o processo de login e extração de dados de tarefas de uma lista específica no ClickUp utilizando Selenium.
-- **Cálculo de Métricas**: Calcula automaticamente métricas essenciais de fluxo de trabalho, incluindo:
-  - **Reaction Time**: Tempo entre a criação de uma tarefa e o início do trabalho nela.
-  - **Cycle Time**: Tempo que uma tarefa leva desde o início até a sua conclusão.
-  - **Lead Time**: Tempo total desde a criação da tarefa até a sua entrega final.
-- **Dashboard Interativo**: Uma interface gráfica construída com Dear PyGui que apresenta:
-  - Tabela de métricas estatísticas agregadas por tag.
-  - Tabela de tarefas detalhadas com capacidade de ordenação.
-  - Filtros por data, tag e responsável.
-- **Visualização de Dados**: Gráficos de dispersão com linhas de tendência (LOESS) para visualizar o comportamento das métricas ao longo do tempo para cada tag.
-- **Armazenamento Local**: Utiliza um banco de dados SQLite local para armazenar os dados extraídos, permitindo análises offline e persistência dos dados.
-- **Edição de Dados**: Permite a edição manual dos dados extraídos antes de importá-los para o banco de dados principal.
+-   **ClickUp Data Extraction**: Automates the login and data extraction process for tasks from a specific ClickUp list using Selenium.
+-   **Metric Calculation**: Automatically calculates essential workflow metrics, including:
+    -   **Reaction Time**: The time between a task's creation and the start of work on it.
+    -   **Cycle Time**: The time a task takes from start to completion.
+    -   **Lead Time**: The total time from task creation to its final delivery.
+-   **Interactive Dashboard**: A GUI built with Dear PyGui that features:
+    -   A table of statistical metrics aggregated by tag.
+    -   A detailed and sortable table of individual tasks.
+    -   Filters for date range, tag, and assignee.
+-   **Data Visualization**: Scatter plots with LOESS trend lines to visualize the behavior of metrics over time for each tag.
+-   **Local Storage**: Uses a local SQLite database to store extracted data, allowing for offline analysis and data persistence.
+-   **Data Editing**: Allows for manual editing of extracted data before it is imported into the main database.
 
-## Arquitetura
+## Architecture
 
-O projeto segue uma arquitetura **Model-View-Controller (MVC)** para garantir uma separação clara de responsabilidades e facilitar a manutenção e escalabilidade.
+The project follows a **Model-View-Controller (MVC)** architecture to ensure a clear separation of responsibilities and to facilitate maintenance and scalability.
 
-- **Model**: Responsável pela lógica de negócios e manipulação de dados. Inclui os módulos para interação com o banco de dados (`main_database.py`, `scrapper_database.py`), automação do navegador (`puppet_browser.py`), parsing de HTML (`html_parser.py`, `regex_engine.py`) e cálculos estatísticos (`tasks_dataframe.py`, `statistics_dataframe.py`).
-- **View**: Responsável pela apresentação da interface do usuário. Inclui todos os módulos que criam e gerenciam os componentes gráficos (`main_window.py`, `overview_tab.py`, etc.).
-- **Controller**: Atua como intermediário entre o Model e a View. Processa as interações do usuário, invoca a lógica de negócios no Model e atualiza a View com os resultados (`controller.py`, `scrapper_controller.py`).
+-   **Model**: Responsible for business logic and data manipulation. This includes modules for database interaction (`main_database.py`, `scrapper_database.py`), browser automation (`puppet_browser.py`), HTML parsing (`html_parser.py`, `regex_engine.py`), and statistical calculations (`tasks_dataframe.py`, `statistics_dataframe.py`).
+-   **View**: Responsible for the user interface presentation. This includes all modules that create and manage graphical components (`main_window.py`, `overview_tab.py`, etc.).
+-   **Controller**: Acts as an intermediary between the Model and the View. It processes user interactions, invokes business logic in the Model, and updates the View with the results (`controller.py`, `scrapper_controller.py`).
 
-## Tecnologias Utilizadas
+## Tech Stack
 
-- **Python**: Linguagem de programação principal.
-- **Dear PyGui**: Para a construção da interface gráfica do usuário.
-- **Pandas**: Para manipulação e análise de dados.
-- **Selenium**: Para automação do navegador e extração de dados web.
-- **Beautiful Soup**: Para parsing de HTML.
-- **Holidays**: Para cálculo preciso de dias úteis, considerando feriados.
-- **SQLite**: Para o armazenamento de dados local.
+-   **Python**: Core programming language.
+-   **Dear PyGui**: For building the graphical user interface.
+-   **Pandas**: For data manipulation and analysis.
+-   **Selenium**: For browser automation and web data extraction.
+-   **Beautiful Soup**: For HTML parsing.
+-   **Holidays**: For accurately calculating business days, considering local holidays.
+-   **SQLite**: For local data storage.
 
-## Instalação e Execução
+## Installation and Setup
 
-Siga os passos abaixo para configurar e executar o projeto em sua máquina local.
+Follow these steps to set up and run the project on your local machine.
 
-### Pré-requisitos
+### Prerequisites
 
-- Python 3.8 ou superior
-- Git
-- Mozilla Firefox
-- [GeckoDriver](https://github.com/mozilla/geckodriver/releases) (o WebDriver para o Firefox)
+-   Python 3.8 or higher
+-   Git
+-   Mozilla Firefox
+-   [GeckoDriver](https://github.com/mozilla/geckodriver/releases) (the WebDriver for Firefox)
 
-### Passos
+### Steps
 
-1.  **Clone o repositório:**
+1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/seu-usuario/torchlight.git
+    git clone https://github.com/your-username/torchlight.git
     cd torchlight
     ```
 
-2.  **Crie e ative um ambiente virtual:**
+2.  **Create and activate a virtual environment:**
     ```bash
-    # Para Windows
+    # For Windows
     python -m venv .venv
     .\.venv\Scripts\activate
 
-    # Para macOS/Linux
+    # For macOS/Linux
     python3 -m venv .venv
     source .venv/bin/activate
     ```
 
-3.  **Instale as dependências:**
+3.  **Install the dependencies:**
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  **Configure o WebDriver:**
-    - Baixe o GeckoDriver compatível com sua versão do Firefox.
-    - Extraia o executável (`geckodriver.exe` no Windows) e adicione o diretório onde ele se encontra à sua variável de ambiente `PATH`, ou coloque o executável diretamente na pasta raiz do projeto.
+4.  **Configure the WebDriver:**
+    -   Download the GeckoDriver compatible with your version of Firefox.
+    -   Extract the executable (`geckodriver.exe` on Windows) and either add its directory to your system's `PATH` environment variable or place the executable directly in the project's root folder.
 
-5.  **Execute a aplicação:**
+5.  **Run the application:**
     ```bash
     python main.py
     ```
 
-## Como Usar
+## How to Use
 
-1.  **Iniciar a Extração**:
-    - Na aplicação, vá para a janela de importação (geralmente através de um botão "Editar Atividades" -> "Importar Atividades do ClickUp").
-    - Preencha seu usuário, senha do ClickUp e o nome exato da lista de onde deseja extrair os dados.
-    - Clique em "Iniciar Extração". Uma janela do Firefox será aberta e o processo de extração começará. Acompanhe o progresso pela janela de log.
+1.  **Start the Extraction**:
+    -   In the application, navigate to the import window (typically via "Editar Atividades" -> "Importar Atividades do ClickUp").
+    -   Enter your ClickUp username, password, and the exact name of the list from which you want to extract data.
+    -   Click "Iniciar Extração". A Firefox window will open, and the extraction process will begin. You can monitor the progress in the log window.
 
-2.  **Analisar os Dados**:
-    - Após a extração, os dados podem ser importados para o banco principal.
-    - Na aba "Visão Geral", utilize os filtros de data, tag e responsável para analisar as métricas de desempenho.
-    - Navegue pelas abas de cada tag para ver os gráficos de tendência detalhados.
+2.  **Analyze the Data**:
+    -   After extraction, the data can be imported into the main database.
+    -   In the "Visão Geral" (Overview) tab, use the filters for date, tag, and assignee to analyze performance metrics.
+    -   Navigate through the individual tag tabs to view detailed trend graphs.
 
-## Licença
+## License
 
-Este projeto é distribuído sob a licença GNU v3. Veja o arquivo `LICENSE` para mais detalhes.
-
----
-<a href="https://www.flaticon.com/br/icones-gratis/tocha" title="tocha ícones">Tocha ícones criados por Freepik - Flaticon</a>
+This project is distributed under the GNU v3 License. See the `LICENSE` file for more details.
