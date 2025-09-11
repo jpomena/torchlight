@@ -98,3 +98,6 @@ Follow these steps to set up and run the project on your local machine.
 ## License
 
 This project is distributed under the GNU v3 License. See the `LICENSE` file for more details.
+
+---
+<a href="https://www.flaticon.com/br/icones-gratis/tocha" title="tocha ícones">Tocha ícones criados por Freepik - Flaticon</a>
