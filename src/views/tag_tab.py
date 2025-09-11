@@ -9,6 +9,7 @@ class TagTab:
     def __init__(self):
         self.tag_name = None
         self.plot_tags = {}
+        self.metric_table_tags = {}
 
     def create_tab(self, tag_name, assignees: List[str]):
         self.tag_name = tag_name
@@ -20,6 +21,7 @@ class TagTab:
                     self._create_controls_section(
                         assignees
                         )
+                    dpg.add_spacer(width=10)
                     self._create_metrics_section()
 
                 with dpg.group(
@@ -67,22 +69,61 @@ class TagTab:
         dpg.fit_axis_data(self.plot_tags['lt_x_axis'])
         dpg.fit_axis_data(self.plot_tags['lt_y_axis'])
 
+    def update_metrics_tables(self, statistics_df: pd.DataFrame):
+        metrics_map = {
+            'RT': self.metric_table_tags['rt_table'],
+            'CT': self.metric_table_tags['ct_table'],
+            'LT': self.metric_table_tags['lt_table'],
+        }
+
+        for metric_prefix, table_tag in metrics_map.items():
+            if dpg.does_item_exist(table_tag):
+                dpg.delete_item(table_tag, children_only=True)
+            else:
+                continue
+
+            metric_rows = [
+                f'Média {metric_prefix} (d)',
+                f'Desv. Pad. {metric_prefix} (d)',
+                f'{metric_prefix} Mín. (d)',
+                f'{metric_prefix} Máx. (d)',
+                f'< {metric_prefix} Mín.',
+                f'<= Média {metric_prefix}',
+                f'<= {metric_prefix} Máx.',
+                f'm {metric_prefix}'
+            ]
+
+            dpg.add_table_column(
+                label="Métrica", parent=table_tag
+            )
+            dpg.add_table_column(
+                label="Valor", parent=table_tag
+            )
+
+            if self.tag_name in statistics_df.columns:
+                for row_name in metric_rows:
+                    if row_name in statistics_df.index:
+                        with dpg.table_row(parent=table_tag):
+                            dpg.add_text(row_name)
+                            value = statistics_df.loc[row_name, self.tag_name]
+                            dpg.add_text(str(value))
+
     def _create_plots(self):
         with dpg.tab_bar(parent=f'{self.tag_name}_lower_pane'):
-            # Reaction Time Plot
-            with dpg.tab(label="Reaction Time"):
-                with dpg.plot(label="Reaction Time", height=-1, width=-1):
-                    self.plot_tags['rt_x_axis'] = dpg.add_plot_axis(
+            # Lead Time Plot
+            with dpg.tab(label="Lead Time"):
+                with dpg.plot(label="Lead Time", height=-1, width=-1):
+                    self.plot_tags['lt_x_axis'] = dpg.add_plot_axis(
                         dpg.mvXAxis, label="Data de Entrega", time=True
                     )
-                    self.plot_tags['rt_y_axis'] = dpg.add_plot_axis(
+                    self.plot_tags['lt_y_axis'] = dpg.add_plot_axis(
                         dpg.mvYAxis, label="Dias"
                     )
-                    self.plot_tags['rt_scatter'] = dpg.add_scatter_series(
-                        [], [], parent=self.plot_tags['rt_y_axis']
+                    self.plot_tags['lt_scatter'] = dpg.add_scatter_series(
+                        [], [], parent=self.plot_tags['lt_y_axis']
                     )
-                    self.plot_tags['rt_line'] = dpg.add_line_series(
-                        [], [], parent=self.plot_tags['rt_y_axis']
+                    self.plot_tags['lt_line'] = dpg.add_line_series(
+                        [], [], parent=self.plot_tags['lt_y_axis']
                     )
 
             # Cycle Time Plot
@@ -101,27 +142,29 @@ class TagTab:
                         [], [], parent=self.plot_tags['ct_y_axis']
                     )
 
-            # Lead Time Plot
-            with dpg.tab(label="Lead Time"):
-                with dpg.plot(label="Lead Time", height=-1, width=-1):
-                    self.plot_tags['lt_x_axis'] = dpg.add_plot_axis(
+            # Reaction Time Plot
+            with dpg.tab(label="Reaction Time"):
+                with dpg.plot(label="Reaction Time", height=-1, width=-1):
+                    self.plot_tags['rt_x_axis'] = dpg.add_plot_axis(
                         dpg.mvXAxis, label="Data de Entrega", time=True
                     )
-                    self.plot_tags['lt_y_axis'] = dpg.add_plot_axis(
+                    self.plot_tags['rt_y_axis'] = dpg.add_plot_axis(
                         dpg.mvYAxis, label="Dias"
                     )
-                    self.plot_tags['lt_scatter'] = dpg.add_scatter_series(
-                        [], [], parent=self.plot_tags['lt_y_axis']
+                    self.plot_tags['rt_scatter'] = dpg.add_scatter_series(
+                        [], [], parent=self.plot_tags['rt_y_axis']
                     )
-                    self.plot_tags['lt_line'] = dpg.add_line_series(
-                        [], [], parent=self.plot_tags['lt_y_axis']
+                    self.plot_tags['rt_line'] = dpg.add_line_series(
+                        [], [], parent=self.plot_tags['rt_y_axis']
                     )
 
     def _create_controls_section(
         self,
         assignees: List[str]
     ):
-        with dpg.group(horizontal=True, parent="upper_pane"):
+        with dpg.group(
+            horizontal=True, parent=f'{self.tag_name}_upper_pane'
+        ):
             current_year = datetime.now().year
             start_date = datetime(current_year, 1, 1)
             end_date = datetime.now()
@@ -135,15 +178,18 @@ class TagTab:
                 'month': end_date.month - 1
             }
 
-            dpg.add_date_picker(
-                label="Início", tag=f"{self.tag_name}_start_date_picker",
-                default_value=start_date_dict
-            )
+            with dpg.group(horizontal=True):
+                dpg.add_date_picker(
+                    label="Início", tag=f"{self.tag_name}_start_date_picker",
+                    default_value=start_date_dict
+                )
+                dpg.add_spacer(width=5)
 
-            dpg.add_date_picker(
-                label="Fim", tag=f"{self.tag_name}_end_date_picker",
-                default_value=end_date_dict
-            )
+                dpg.add_date_picker(
+                    label="Fim", tag=f"{self.tag_name}_end_date_picker",
+                    default_value=end_date_dict
+                )
+                dpg.add_spacer(width=5)
 
             with dpg.group():
                 dpg.add_combo(
@@ -162,12 +208,32 @@ class TagTab:
                 )
 
     def _create_metrics_section(self):
-        with dpg.group(horizontal=True, parent='upper_pane'):
-            dpg.table(label='Reaction Time')
-            dpg.add_spacer(width=5)
+        with dpg.group(
+            horizontal=True, parent=f'{self.tag_name}_upper_pane'
+        ):
+            rt_table_tag = f"rt_table_{self.tag_name}"
+            ct_table_tag = f"ct_table_{self.tag_name}"
+            lt_table_tag = f"lt_table_{self.tag_name}"
 
-            dpg.table(label='Cycle Time')
-            dpg.add_spacer(width=5)
+            self.metric_table_tags['rt_table'] = rt_table_tag
+            self.metric_table_tags['ct_table'] = ct_table_tag
+            self.metric_table_tags['lt_table'] = lt_table_tag
 
-            dpg.table(label='Lead Time')
+            dpg.add_table(
+                header_row=True, tag=rt_table_tag,
+                policy=dpg.mvTable_SizingFixedFit,
+                height=250, width=150
+            )
+            dpg.add_spacer(width=5)
+            dpg.add_table(
+                header_row=True, tag=ct_table_tag,
+                policy=dpg.mvTable_SizingFixedFit,
+                height=250, width=150
+            )
+            dpg.add_spacer(width=5)
+            dpg.add_table(
+                header_row=True, tag=lt_table_tag,
+                policy=dpg.mvTable_SizingFixedFit,
+                height=250, width=150
+            )
             dpg.add_spacer(width=5)

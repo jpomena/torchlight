@@ -19,7 +19,8 @@ class MainWindow:
         apply_filters_callback: Callable,
         sort_tasks_callback: Callable,
         edit_db_window_callback: Callable,
-        open_import_window_callback: Callable
+        open_import_window_callback: Callable,
+        save_callback: Callable
     ):
         with dpg.window(
             tag="primary_window",
@@ -44,10 +45,15 @@ class MainWindow:
         dpg.set_primary_window("primary_window", True)
 
         self._create_edit_db_window(
+            save_callback,
             open_import_window_callback=open_import_window_callback
         )
 
-    def _create_edit_db_window(self, open_import_window_callback: Callable):
+    def _create_edit_db_window(
+        self,
+        save_callback: Callable,
+        open_import_window_callback: Callable
+    ):
         with dpg.window(
             label='Editar Atividades',
             tag=self.edit_db_window_tag,
@@ -57,7 +63,9 @@ class MainWindow:
             height=720
         ):
             with dpg.group(horizontal=True):
-                dpg.add_button(label='Salvar Alterações')
+                dpg.add_button(
+                    label='Salvar Alterações', callback=save_callback
+                )
                 dpg.add_button(
                     label='Importar Atividades do ClickUp',
                     callback=open_import_window_callback

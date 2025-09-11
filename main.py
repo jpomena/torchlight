@@ -67,7 +67,7 @@ def main():
 
             dpg.add_theme_color(dpg.mvThemeCol_Tab, (240, 240, 240, 255))
             dpg.add_theme_color(
-                    dpg.mvThemeCol_TableHeaderBg, (245, 245, 245, 255)
+                    dpg.mvThemeCol_TableHeaderBg, (230, 230, 230, 255)
             )
             dpg.add_theme_color(
                     dpg.mvThemeCol_TableBorderStrong, (200, 200, 200, 255)

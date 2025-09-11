@@ -22,6 +22,8 @@ class Controller:
         self.scrapper_controller = ScrapperController(self.mw.scrapper_window)
         self.tasks_df = None
         self.filtered_df = None
+        self.edited_df = None
+        self.original_edited_df = None
 
     def initialize_view(self):
         self._create_dataframes()
@@ -35,7 +37,8 @@ class Controller:
             apply_filters_callback=self.apply_filters,
             sort_tasks_callback=self._on_sort_tasks,
             edit_db_window_callback=self._toggle_edit_db_window,
-            open_import_window_callback=self._transition_to_extract_window
+            open_import_window_callback=self._transition_to_extract_window,
+            save_callback=self.save_edited_tasks
         )
 
         self.mw.scrapper_window.create_window(
@@ -89,10 +92,13 @@ class Controller:
         self.filtered_df = filtered_df
         self._update_overview_data()
         self._update_tag_tab_data()
+        self._update_tag_tab_data()
 
     def _update_tag_tab_data(self):
         if self.filtered_df.empty:
             return
+
+        statistics_df = self._calculate_statistics(self.filtered_df)
 
         tags = self.filtered_df['task_tag'].unique().tolist()
         for tag in tags:
@@ -114,6 +120,7 @@ class Controller:
                 self.mw.tag_tabs[tag].update_plots(
                     tag_df, rt_fit, ct_fit, lt_fit
                 )
+                self.mw.tag_tabs[tag].update_metrics_tables(statistics_df)
 
     def _update_overview_data(self):
         if self.filtered_df.empty:
@@ -198,6 +205,8 @@ class Controller:
             self.mw.overview_tab.update_tasks_table(df_to_sort)
 
     def _toggle_edit_db_window(self):
+        self.edited_df = self.db.create_tasks_df()
+        self.original_edited_df = self.edited_df.copy()
         self._populate_edit_db_window()
         dpg.configure_item(self.mw.edit_db_window_tag, show=True)
 
@@ -205,7 +214,6 @@ class Controller:
         table_tag = 'edit_db_table'
         container_tag = 'edit_db_table_container'
         headers = self.mw.overview_tab.headers_map
-        df = self.db.create_tasks_df()
 
         if dpg.does_item_exist(table_tag):
             dpg.delete_item(table_tag)
@@ -224,15 +232,51 @@ class Controller:
             tag=table_tag,
             parent=container_tag
         ):
-            for col in df.columns:
+            for col in self.edited_df.columns:
                 dpg.add_table_column(label=headers.get(col, col))
+            dpg.add_table_column(label="Ações")
 
-            for i, row in df.iterrows():
+            for task_id, row in self.edited_df.iterrows():
                 with dpg.table_row():
-                    for j, item in enumerate(row):
+                    for col_name, item in row.items():
                         dpg.add_input_text(
-                            default_value=str(item), tag=f'cell_{i}_{j}'
+                            default_value=str(item),
+                            tag=f"cell_{task_id}_{col_name}"
                         )
+                    dpg.add_button(
+                        label="Remover",
+                        callback=lambda s, a, u: self.delete_task(u),
+                        user_data=task_id
+                    )
+
+    def save_edited_tasks(self):
+        if self.original_edited_df is None or self.edited_df is None:
+            return
+
+        current_ui_df = self.edited_df.copy()
+        for task_id, row in current_ui_df.iterrows():
+            for col_name in current_ui_df.columns:
+                tag = f"cell_{task_id}_{col_name}"
+                if dpg.does_item_exist(tag):
+                    new_value = dpg.get_value(tag)
+                    current_ui_df.at[task_id, col_name] = new_value
+
+        original_ids = set(self.original_edited_df.index)
+        current_ids = set(current_ui_df.index)
+        ids_to_delete = original_ids - current_ids
+
+        for task_id in ids_to_delete:
+            self.db.delete_task(task_id)
+
+        self.db.update_tasks_from_df(current_ui_df)
+        self._create_dataframes()
+        self.apply_filters()
+        self._toggle_edit_db_window()
+
+    def delete_task(self, task_id: int):
+        if self.edited_df is not None:
+            self.edited_df.drop(task_id, inplace=True)
+        self._populate_edit_db_window()
 
     def import_scrapper_df(self):
         scrapper_df = self.scrapper_controller.get_scrapper_df()
