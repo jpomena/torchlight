@@ -30,10 +30,14 @@ class TagTab:
                     dpg.add_spacer(width=50)
                     self._create_metrics_section()
 
-                with dpg.group(
-                    horizontal=True, tag=f'{self.tag_name}_lower_pane'
-                ):
-                    self._create_plots()
+                with dpg.tab_bar():
+                    with dpg.tab(label="Métricas de Tempo"):
+                        with dpg.group(
+                            horizontal=True, tag=f'{self.tag_name}_lower_pane'
+                        ):
+                            self._create_scatter_plots()
+                    with dpg.tab(label="CFD"):
+                        self._create_cfd_plot()
 
     def update_plots(
         self,
@@ -74,6 +78,39 @@ class TagTab:
         dpg.fit_axis_data(self.plot_tags['ct_y_axis'])
         dpg.fit_axis_data(self.plot_tags['lt_x_axis'])
         dpg.fit_axis_data(self.plot_tags['lt_y_axis'])
+
+    def update_cfd_plot(self, cfd_df: pd.DataFrame):
+        if cfd_df.empty:
+            dpg.set_value(f"cfd_created_series_{self.tag_name}", [[], [], []])
+            dpg.set_value(f"cfd_started_series_{self.tag_name}", [[], [], []])
+            dpg.set_value(f"cfd_done_series_{self.tag_name}", [[], [], []])
+            dpg.set_value(
+                f"cfd_delivered_series_{self.tag_name}", [[], [], []]
+            )
+            return
+
+        dates = [time.mktime(d.timetuple()) for d in cfd_df.index]
+        zeros = [0] * len(dates)
+
+        dpg.set_value(
+            f"cfd_created_series_{self.tag_name}",
+            [dates, cfd_df['Created'].tolist(), zeros]
+        )
+        dpg.set_value(
+            f"cfd_started_series_{self.tag_name}",
+            [dates, cfd_df['Started'].tolist(), zeros]
+        )
+        dpg.set_value(
+            f"cfd_done_series_{self.tag_name}",
+            [dates, cfd_df['Done'].tolist(), zeros]
+        )
+        dpg.set_value(
+            f"cfd_delivered_series_{self.tag_name}",
+            [dates, cfd_df['Delivered'].tolist(), zeros]
+        )
+
+        dpg.fit_axis_data(f"cfd_x_axis_{self.tag_name}")
+        dpg.fit_axis_data(f"cfd_y_axis_{self.tag_name}")
 
     def get_filter_values(self) -> Dict:
         start_date_dict = dpg.get_value(f"{self.tag_name}_start_date_picker")
@@ -134,9 +171,70 @@ class TagTab:
                             value = statistics_df.loc[row_name, self.tag_name]
                             dpg.add_text(str(value))
 
-    def _create_plots(self):
-        with dpg.tab_bar(parent=f'{self.tag_name}_lower_pane'):
-            # Lead Time Plot
+    def _create_cfd_plot(self):
+        with dpg.plot(label=f"CFD - {self.tag_name}", height=-1, width=-1):
+            dpg.add_plot_legend()
+            dpg.add_plot_axis(
+                dpg.mvXAxis, label="Data", time=True,
+                tag=f"cfd_x_axis_{self.tag_name}"
+            )
+            y_axis_tag = f"cfd_y_axis_{self.tag_name}"
+            dpg.add_plot_axis(
+                dpg.mvYAxis, label="Contagem de Tarefas", tag=y_axis_tag
+            )
+
+            created_series_tag = f"cfd_created_series_{self.tag_name}"
+            started_series_tag = f"cfd_started_series_{self.tag_name}"
+            done_series_tag = f"cfd_done_series_{self.tag_name}"
+            delivered_series_tag = f"cfd_delivered_series_{self.tag_name}"
+
+            dpg.add_shade_series(
+                [], [], y2=[], parent=y_axis_tag, label="Backlog",
+                tag=created_series_tag
+            )
+            dpg.add_shade_series(
+                [], [], y2=[], parent=y_axis_tag, label="Em Progresso",
+                tag=started_series_tag
+            )
+            dpg.add_shade_series(
+                [], [], y2=[], parent=y_axis_tag, label="Concluído",
+                tag=done_series_tag
+            )
+            dpg.add_shade_series(
+                [], [], y2=[], parent=y_axis_tag, label="Entregue",
+                tag=delivered_series_tag
+            )
+
+            with dpg.theme() as backlog_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [201, 201, 201, 150]
+                    )
+            dpg.bind_item_theme(created_series_tag, backlog_theme)
+
+            with dpg.theme() as started_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [253, 244, 201, 150]
+                    )
+            dpg.bind_item_theme(started_series_tag, started_theme)
+
+            with dpg.theme() as done_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [218, 236, 213, 150]
+                    )
+            dpg.bind_item_theme(done_series_tag, done_theme)
+
+            with dpg.theme() as delivered_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [253, 231, 221, 150]
+                    )
+            dpg.bind_item_theme(delivered_series_tag, delivered_theme)
+
+    def _create_scatter_plots(self):
+        with dpg.tab_bar():
             with dpg.tab(label="Lead Time"):
                 with dpg.plot(
                     label="Lead Time", height=-1, width=-1
@@ -157,7 +255,6 @@ class TagTab:
                         label='Linha de Tendência'
                     )
 
-            # Cycle Time Plot
             with dpg.tab(label="Cycle Time"):
                 with dpg.plot(
                     label="Cycle Time", height=-1, width=-1
@@ -178,7 +275,6 @@ class TagTab:
                         label='Linha de Tendência'
                     )
 
-            # Reaction Time Plot
             with dpg.tab(label="Reaction Time"):
                 with dpg.plot(
                     label="Reaction Time", height=-1, width=-1

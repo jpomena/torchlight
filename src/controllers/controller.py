@@ -121,9 +121,15 @@ class Controller:
             ]
 
         if filtered_df.empty:
+            tag_tab.update_plots(pd.DataFrame(), ([], []), ([], []), ([], []))
+            tag_tab.update_metrics_tables(
+                self.sdf.create_statistics_df(pd.DataFrame())
+            )
+            tag_tab.update_cfd_plot(pd.DataFrame())
             return
 
         statistics_df = self._calculate_statistics(filtered_df)
+        cfd_df = self.sdf.calculate_cfd_data(filtered_df.copy())
 
         rt_fit = self.sdf.get_loess_fit(
             filtered_df, 'task_reaction_time'
@@ -137,18 +143,22 @@ class Controller:
 
         tag_tab.update_plots(filtered_df, rt_fit, ct_fit, lt_fit)
         tag_tab.update_metrics_tables(statistics_df)
+        tag_tab.update_cfd_plot(cfd_df)
 
     def _update_overview_data(self):
         if self.filtered_df.empty:
             empty_stats = self.sdf.create_statistics_df(self.filtered_df)
             self.mw.overview_tab.update_metrics_table(empty_stats)
             self.mw.overview_tab.update_tasks_table(self.filtered_df)
+            self.mw.overview_tab.update_cfd_plot(pd.DataFrame())
             return
 
         statistics_df = self._calculate_statistics(self.filtered_df)
+        cfd_df = self.sdf.calculate_cfd_data(self.filtered_df.copy())
 
         self.mw.overview_tab.update_metrics_table(statistics_df)
         self.mw.overview_tab.update_tasks_table(self.filtered_df)
+        self.mw.overview_tab.update_cfd_plot(cfd_df)
 
     def _update_tag_tab_data(self):
         if self.filtered_df.empty:

@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Callable, Dict
 from datetime import date
+import time
 
 
 class OverviewTab:
@@ -30,17 +31,22 @@ class OverviewTab:
         edit_db_window_callback: Callable
     ):
         with dpg.tab(label="Visão Geral"):
-            with dpg.group(horizontal=True):
-                with dpg.child_window(width=700, tag="left_pane"):
-                    dpg.add_spacer(width=5)
-                    self._create_controls_section(
-                        tags, assignees,
-                        apply_filters_callback, edit_db_window_callback
-                    )
-                    dpg.add_spacer(width=5)
-                    self._create_metrics_table()
-                with dpg.child_window(tag="right_pane"):
-                    self._create_tasks_table(sort_tasks_callback)
+            with dpg.tab_bar():
+                with dpg.tab(label="Métricas e Tarefas"):
+                    with dpg.group(horizontal=True):
+                        with dpg.child_window(width=700, tag="left_pane"):
+                            dpg.add_spacer(width=5)
+                            self._create_controls_section(
+                                tags, assignees,
+                                apply_filters_callback, edit_db_window_callback
+                            )
+                            dpg.add_spacer(width=5)
+                            self._create_metrics_table()
+                        with dpg.child_window(tag="right_pane"):
+                            self._create_tasks_table(sort_tasks_callback)
+
+                with dpg.tab(label="CFD"):
+                    self._create_cfd_plot()
 
     def get_filter_values(self) -> Dict:
         start_date_dict = dpg.get_value("overview_start_date_picker")
@@ -102,8 +108,96 @@ class OverviewTab:
                     else:
                         dpg.add_text(str(item))
 
+    def update_cfd_plot(self, cfd_df: pd.DataFrame):
+        if cfd_df.empty:
+            dpg.set_value("cfd_created_series", [[], [], []])
+            dpg.set_value("cfd_started_series", [[], [], []])
+            dpg.set_value("cfd_done_series", [[], [], []])
+            dpg.set_value("cfd_delivered_series", [[], [], []])
+            return
+
+        dates = [time.mktime(d.timetuple()) for d in cfd_df.index]
+        zeros = [0] * len(dates)
+
+        dpg.set_value(
+            "cfd_created_series",
+            [dates, cfd_df['Created'].tolist(), zeros]
+        )
+        dpg.set_value(
+            "cfd_started_series",
+            [dates, cfd_df['Started'].tolist(), zeros]
+        )
+        dpg.set_value(
+            "cfd_done_series",
+            [dates, cfd_df['Done'].tolist(), zeros]
+        )
+        dpg.set_value(
+            "cfd_delivered_series",
+            [dates, cfd_df['Delivered'].tolist(), zeros]
+        )
+
+        dpg.fit_axis_data("cfd_x_axis")
+        dpg.fit_axis_data("cfd_y_axis")
+
     def get_tasks_table_column_map(self) -> Dict[int, str]:
         return self._tasks_table_column_map
+
+    def _create_cfd_plot(self):
+        with dpg.plot(
+            label="Diagrama de Fluxo Cumulativo", height=-1, width=-1
+        ):
+            dpg.add_plot_legend()
+            self.cfd_x_axis = dpg.add_plot_axis(
+                dpg.mvXAxis, label="Data", time=True, tag="cfd_x_axis"
+            )
+            self.cfd_y_axis = dpg.add_plot_axis(
+                dpg.mvYAxis, label="Contagem de Tarefas", tag="cfd_y_axis"
+            )
+
+            dpg.add_shade_series(
+                [], [], y2=[], parent=self.cfd_y_axis, label="Backlog",
+                tag="cfd_created_series"
+            )
+            dpg.add_shade_series(
+                [], [], y2=[], parent=self.cfd_y_axis, label="Em Progresso",
+                tag="cfd_started_series"
+            )
+            dpg.add_shade_series(
+                [], [], y2=[], parent=self.cfd_y_axis, label="Concluído",
+                tag="cfd_done_series"
+            )
+            dpg.add_shade_series(
+                [], [], y2=[], parent=self.cfd_y_axis, label="Entregue",
+                tag="cfd_delivered_series"
+            )
+
+            with dpg.theme() as backlog_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [201, 201, 201, 150]
+                    )
+            dpg.bind_item_theme("cfd_created_series", backlog_theme)
+
+            with dpg.theme() as started_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [253, 244, 201, 150]
+                    )
+            dpg.bind_item_theme("cfd_started_series", started_theme)
+
+            with dpg.theme() as done_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [218, 236, 213, 150]
+                    )
+            dpg.bind_item_theme("cfd_done_series", done_theme)
+
+            with dpg.theme() as delivered_theme:
+                with dpg.theme_component(dpg.mvShadeSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Fill, [253, 231, 221, 150]
+                    )
+            dpg.bind_item_theme("cfd_delivered_series", delivered_theme)
 
     def _create_controls_section(
         self,

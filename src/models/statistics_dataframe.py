@@ -167,6 +167,52 @@ class StatisticsDataframe:
 
         return x_fit, y_fit
 
+    def calculate_cfd_data(self, tasks: pd.DataFrame) -> pd.DataFrame:
+        if tasks.empty:
+            return pd.DataFrame()
+
+        date_cols = [
+            'task_backlog_date', 'task_start_date',
+            'task_done_date', 'task_delivery_date'
+        ]
+        tasks_copy = tasks.copy()
+        for col in date_cols:
+            tasks_copy[col] = pd.to_datetime(tasks_copy[col], errors='coerce')
+
+        min_date = tasks_copy['task_backlog_date'].min()
+        max_date = tasks_copy['task_delivery_date'].max()
+
+        if pd.isna(min_date) or pd.isna(max_date):
+            return pd.DataFrame()
+
+        date_range = pd.date_range(start=min_date, end=max_date, freq='D')
+
+        created = [
+            tasks_copy[tasks_copy['task_backlog_date'] <= day].shape[0]
+            for day in date_range
+        ]
+        started = [
+            tasks_copy[tasks_copy['task_start_date'] <= day].shape[0]
+            for day in date_range
+        ]
+        done = [
+            tasks_copy[tasks_copy['task_done_date'] <= day].shape[0]
+            for day in date_range
+        ]
+        delivered = [
+            tasks_copy[tasks_copy['task_delivery_date'] <= day].shape[0]
+            for day in date_range
+        ]
+
+        cfd_df = pd.DataFrame({
+            'Created': created,
+            'Started': started,
+            'Done': done,
+            'Delivered': delivered
+        }, index=date_range)
+
+        return cfd_df
+
     def fill_task_count(
         self,
         statistics: pd.DataFrame,
