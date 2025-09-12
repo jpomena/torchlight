@@ -139,8 +139,9 @@ class TagTab:
             # Lead Time Plot
             with dpg.tab(label="Lead Time"):
                 with dpg.plot(
-                    label="Lead Time", height=-1, width=-1, no_legend=False
+                    label="Lead Time", height=-1, width=-1
                 ):
+                    dpg.add_plot_legend()
                     self.plot_tags['lt_x_axis'] = dpg.add_plot_axis(
                         dpg.mvXAxis, label="Data de Entrega", time=True
                     )
@@ -149,18 +150,19 @@ class TagTab:
                     )
                     self.plot_tags['lt_scatter'] = dpg.add_scatter_series(
                         [], [], parent=self.plot_tags['lt_y_axis'],
-                        label='Lead Time'
+                        label='Atividades'
                     )
                     self.plot_tags['lt_line'] = dpg.add_line_series(
                         [], [], parent=self.plot_tags['lt_y_axis'],
-                        label='Tendência'
+                        label='Linha de Tendência'
                     )
 
             # Cycle Time Plot
             with dpg.tab(label="Cycle Time"):
                 with dpg.plot(
-                    label="Cycle Time", height=-1, width=-1, no_legend=False
+                    label="Cycle Time", height=-1, width=-1
                 ):
+                    dpg.add_plot_legend()
                     self.plot_tags['ct_x_axis'] = dpg.add_plot_axis(
                         dpg.mvXAxis, label="Data de Entrega", time=True
                     )
@@ -169,18 +171,19 @@ class TagTab:
                     )
                     self.plot_tags['ct_scatter'] = dpg.add_scatter_series(
                         [], [], parent=self.plot_tags['ct_y_axis'],
-                        label='Cycle Time'
+                        label='Atividades'
                     )
                     self.plot_tags['ct_line'] = dpg.add_line_series(
                         [], [], parent=self.plot_tags['ct_y_axis'],
-                        label='Tendência'
+                        label='Linha de Tendência'
                     )
 
             # Reaction Time Plot
             with dpg.tab(label="Reaction Time"):
                 with dpg.plot(
-                    label="Reaction Time", height=-1, width=-1, no_legend=False
+                    label="Reaction Time", height=-1, width=-1
                 ):
+                    dpg.add_plot_legend()
                     self.plot_tags['rt_x_axis'] = dpg.add_plot_axis(
                         dpg.mvXAxis, label="Data de Entrega", time=True
                     )
@@ -189,11 +192,11 @@ class TagTab:
                     )
                     self.plot_tags['rt_scatter'] = dpg.add_scatter_series(
                         [], [], parent=self.plot_tags['rt_y_axis'],
-                        label='Reaction Time'
+                        label='Atividades'
                     )
                     self.plot_tags['rt_line'] = dpg.add_line_series(
                         [], [], parent=self.plot_tags['rt_y_axis'],
-                        label='Tendência'
+                        label='Linha de Tendência'
                     )
 
     def _create_controls_section(
